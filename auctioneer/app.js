@@ -309,8 +309,27 @@ async function submitSupportTicket(){
 function openPrivacyCenter(){
   if(!S.user){openAuth("signin");return}
   byId("modal").className="modal";
-  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Privacy center</div><h2 style="font:700 28px Georgia">Your data</h2><p class="muted">Request an export, correction or deletion review. Requests are recorded for manual fulfillment until automated account tooling is added.</p><select id="privacyType" class="control"><option value="export">Export my data</option><option value="correct">Correct my data</option><option value="delete">Delete my account/data</option></select><textarea id="privacyDetails" class="control" style="margin-top:8px;min-height:90px" placeholder="Optional details"></textarea><button class="btn primary full" style="margin-top:10px" onclick="submitPrivacyRequest()">Submit request</button></div></div>';
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Privacy center</div><h2 style="font:700 28px Georgia">Your data</h2><p class="muted">Request an export, correction or deletion review. Requests are recorded for manual fulfillment until automated account tooling is added.</p><button class="btn full" onclick="downloadMyData()">Download my data now</button><select id="privacyType" class="control" style="margin-top:8px"><option value="correct">Correct my data</option><option value="delete">Delete my account/data</option></select><textarea id="privacyDetails" class="control" style="margin-top:8px;min-height:90px" placeholder="Optional details"></textarea><button class="btn primary full" style="margin-top:10px" onclick="submitPrivacyRequest()">Submit request</button></div></div>';
 }
+
+async function downloadMyData(){
+  const {data,error}=await db.rpc("export_my_data");
+  if(error){toast(error.message);return}
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="auctioneer-my-data.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function startPayment(orderId){
+  if(!S.platform?.payments_enabled){toast("Payments are not enabled yet");return}
+  const {data,error}=await db.functions.invoke("payments-create",{body:{order_id:orderId}});
+  if(error||data?.error){toast(data?.error||error?.message||"Payment could not start");return}
+  toast("Payment session created");
+  console.log("Payment intent",data);
+}
+
 async function submitPrivacyRequest(){
   const {error}=await db.from("privacy_requests").insert({user_id:S.user.id,request_type:byId("privacyType").value,details:byId("privacyDetails").value||null});
   if(error){toast(error.message);return}
@@ -412,7 +431,7 @@ async function renderOrders(){
   if(error){box.innerHTML='<div class="empty"><b>Could not load orders</b>'+esc(error.message)+'</div>';return}
   box.innerHTML=(data||[]).length?(data||[]).map(o=>{
     const l=S.lots.find(x=>x.id===o.lot_id);
-    return '<div class="orderCard"><div><div class="eyebrow">'+esc(o.status)+'</div><h3>'+esc(l?.title||"Auction purchase")+'</h3><div class="muted">'+fmt(o.hammer_price)+' hammer · '+fmt(o.protection_fee)+' protection</div></div><div class="orderAmount"><small>Total</small><b>'+fmt(o.total_amount)+'</b></div><div class="orderActions">'+((o.status==="paid"||o.status==="awaiting_pickup")?'<button class="btn sm" onclick="issuePickupCode(\''+o.id+'\')">Pickup code</button>':'')+((["paid","awaiting_pickup","collected"].includes(o.status))?'<button class="btn sm" onclick="openDispute(\''+o.id+'\')">Report issue</button>':'')+'</div></div>';
+    return '<div class="orderCard"><div><div class="eyebrow">'+esc(o.status)+'</div><h3>'+esc(l?.title||"Auction purchase")+'</h3><div class="muted">'+fmt(o.hammer_price)+' hammer · '+fmt(o.protection_fee)+' protection</div></div><div class="orderAmount"><small>Total</small><b>'+fmt(o.total_amount)+'</b></div><div class="orderActions">'+(o.status==="awaiting_payment"?'<button class="btn primary sm" onclick="startPayment(\''+o.id+'\')">Pay now</button>':'')+((o.status==="paid"||o.status==="awaiting_pickup")?'<button class="btn sm" onclick="issuePickupCode(\''+o.id+'\')">Pickup code</button>':'')+((["paid","awaiting_pickup","collected"].includes(o.status))?'<button class="btn sm" onclick="openDispute(\''+o.id+'\')">Report issue</button>':'')+'</div></div>';
   }).join(""):'<div class="empty"><b>No orders yet</b>Won lots will appear here after an auction closes.</div>';
 }
 async function issuePickupCode(orderId){
@@ -465,7 +484,7 @@ async function handleDeepLink(){
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.downloadMyData=downloadMyData;window.startPayment=startPayment;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth(),syncServerTime(),loadPlatformSettings()]);

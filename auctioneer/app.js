@@ -13,7 +13,7 @@ pl:{brandSub:"narzędzia i sprzęt",searchPh:"Szukaj wiertarek, wózków, kompre
 nl:{brandSub:"gereedschap & machines",searchPh:"Zoek boren, heftrucks, compressoren, merken, modellen...",search:"Zoeken",forHouses:"Voor veilinghuizen",addInventory:"+ Inventaris toevoegen",heroEyebrow:"Marktplaats + veilingbeheer",heroTitle:"Vind degelijk gereedschap.<br>Bied met vertrouwen.",heroText:"Een eenvoudige marktplaats voor gereedschap en industriële apparatuur met menselijke kwaliteitscontrole.",browse:"Bekijk apparatuur",auctions:"Veilingen",trust1:"Menselijk gecontroleerd",trust2:"Duidelijke conditie",trust3:"Geverifieerde veilinghuizen",discover:"Ontdek",ending:"Eindigt binnenkort",endingSub:"Apparatuur die een kijkje waard is.",marketplace:"Marktplaats",allEquip:"Alle apparatuur",filters:"Filters",sort:"Sorteren",condition:"Conditie",brand:"Merk",priceRange:"Huidige prijs",saveSearch:"☆ Zoekopdracht opslaan",trusted:"Betrouwbare verkopers",featuredAuctions:"Uitgelichte veilingen",featuredSub:"Bedrijfsopheffingen en specialistische apparatuur.",allAuctions:"Alle veilingen →",browseBySale:"Per verkoop",auctionProjects:"Veilingprojecten",auctionProjectsSub:"Collecties van geverifieerde veilinghuizen.",saved:"Opgeslagen",watchlist:"Volglijst",watchSub:"Items die je wilt volgen.",opsTitle:"Catalogusbeheer",opsSub:"De professionele laag achter de marktplaats.",exportAll:"CSV exporteren",qa:"Kwaliteitscontrole",reviewQueue:"Controlelijst",findLot:"Zoek lot...",readiness:"Exportgereed",catalogHealth:"Catalogusstatus",photoIntake:"Foto-invoer",newInventory:"Nieuwe inventaris",newInventorySub:"Eerst foto's. Daarna structuur en QA.",dropTitle:"Sleep foto's van apparatuur hierheen",dropSub:"JPG, PNG of WEBP. Meerdere foto's per lot ondersteund.",shop:"Shop",results:"resultaten",currentBid:"huidig bod",ends:"eindigt",verified:"Geverifieerd veilinghuis",lot:"Lot",seller:"Verkoper",category:"Categorie",model:"Model",conditionLabel:"Conditie",qaLabel:"Catalogus QA",savedSearch:"Zoekopdracht opgeslagen",favAdded:"Toegevoegd aan volglijst",favRemoved:"Verwijderd uit volglijst",signIn:"Inloggen",myAccount:"Mijn account",placeBid:"Bod plaatsen",maxBid:"Maximumbod",bidHistory:"Biedhistorie",highBidder:"Je bent hoogste bieder",register:"Registreer om te bieden",registered:"Geregistreerd",pickup:"Ophalen / verzending",detected:"Gedetecteerd",myBids:"Mijn biedingen",signUp:"Account maken",logOut:"Uitloggen",accountCreated:"Account aangemaakt",loginFailed:"Inloggen mislukt",bidPlaced:"Bod geplaatst",uploadDone:"Foto's geüpload"}
 };
 
-const S={lang:"en",houses:[],auctions:[],lots:[],user:null,profile:null,watch:new Set(),regs:new Set(),myBids:new Map(),cat:"All",sort:"recommended",qa:"ALL",manualLang:false};
+const S={lang:"en",houses:[],auctions:[],lots:[],ranked:null,user:null,profile:null,watch:new Set(),regs:new Set(),myBids:new Map(),cat:"All",sort:"recommended",qa:"ALL",manualLang:false,geo:{lat:null,lon:null,country:null,code:null},radius:null,sessionId:crypto.randomUUID(),impressed:new Set()};
 const tr=k=>(I18N[S.lang]&&I18N[S.lang][k])||I18N.en[k]||k;
 const byId=id=>document.getElementById(id);
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -49,7 +49,7 @@ async function loadPrivate(){
 }
 async function initAuth(){
   const {data:{session}}=await db.auth.getSession();S.user=session?.user||null;await loadPrivate();
-  db.auth.onAuthStateChange(async(_event,session)=>{S.user=session?.user||null;await loadPrivate();renderAll()});
+  db.auth.onAuthStateChange(async(_event,session)=>{S.user=session?.user||null;await loadPrivate();await syncBuyerGeo();renderAll()});
 }
 function subscribeRealtime(){
   db.channel("auctioneer-live")
@@ -61,39 +61,73 @@ function subscribeRealtime(){
 function renderLangMenu(){byId("langMenu").innerHTML=Object.entries(LANGS).map(([k,v])=>'<button class="'+(k===S.lang?'active':'')+'" onclick="setLang(\''+k+'\',true);toggleLangMenu(false)"><span class="flag">'+v[1]+'</span><span class="langName">'+v[2]+'</span><span class="langCode">'+v[0]+'</span></button>').join("")}
 function toggleLangMenu(force){const e=byId("langMenu"),show=force===undefined?e.classList.contains("hidden"):force;e.classList.toggle("hidden",!show)}
 function setLang(v,manual=false){S.lang=I18N[v]?v:"en";S.manualLang=manual||S.manualLang;if(manual){localStorage.setItem("auctioneer-lang",S.lang);localStorage.setItem("auctioneer-lang-manual","1")}document.documentElement.lang=S.lang;byId("langFlag").textContent=LANGS[S.lang][1];byId("langCode").textContent=LANGS[S.lang][0];document.querySelectorAll("[data-i18n]").forEach(e=>e.innerHTML=tr(e.dataset.i18n));document.querySelectorAll("[data-i18n-placeholder]").forEach(e=>e.placeholder=tr(e.dataset.i18nPlaceholder));renderLangMenu();renderAll()}
+async function syncBuyerGeo(){
+  if(!S.user||S.geo.lat==null||S.geo.lon==null)return;
+  await db.from("buyer_geo_profile").upsert({
+    user_id:S.user.id,
+    country_code:S.geo.code||null,
+    home_latitude:S.geo.lat,
+    home_longitude:S.geo.lon,
+    preferred_radius_km:S.radius||100
+  });
+}
+async function refreshRankedFeed(){
+  if(S.geo.lat==null||S.geo.lon==null){S.ranked=null;renderMarket();return}
+  const {data,error}=await db.rpc("ranked_feed",{
+    p_lat:S.geo.lat,p_lon:S.geo.lon,p_radius_km:S.radius,
+    p_category:null,p_brand:null,p_price_min:null,p_price_max:null,p_limit:100
+  });
+  if(error){console.error(error);S.ranked=null;renderMarket();return}
+  S.ranked=(data||[]).map(r=>{
+    const base=S.lots.find(x=>x.id===r.lot_id)||{};
+    return {...base,_distance:r.distance_km,_visibility:r.visibility_radius_km,_liquidity:r.liquidity_score,_score:r.final_score,_reasons:r.reason_codes||[]};
+  });
+  renderMarket();
+}
 async function detectLang(){
   const map={LT:"lt",NO:"no",DE:"de",AT:"de",CH:"de",PL:"pl",NL:"nl",BE:"nl"};
-  const manual=localStorage.getItem("auctioneer-lang-manual")==="1", saved=localStorage.getItem("auctioneer-lang");
-  if(manual&&saved){S.manualLang=true;setLang(saved,false);byId("geoLabel").textContent="Manual";return}
+  const manual=localStorage.getItem("auctioneer-lang-manual")==="1",saved=localStorage.getItem("auctioneer-lang");
   let choice=(navigator.language||"en").slice(0,2).toLowerCase();if(!I18N[choice])choice="en";let label="browser";
   try{
     const r=await fetch(SB_URL+"/functions/v1/geo",{cache:"no-store"});const d=await r.json();
     if(d?.country_code&&map[String(d.country_code).toUpperCase()])choice=map[String(d.country_code).toUpperCase()];
     label=d?.country||d?.country_code||label;
-  }catch(e){
-    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"",m={"Europe/Vilnius":["lt","Lithuania"],"Europe/Oslo":["no","Norway"],"Europe/Amsterdam":["nl","Netherlands"],"Europe/Berlin":["de","Germany"],"Europe/Warsaw":["pl","Poland"]};
-    if(m[tz]){choice=m[tz][0];label=m[tz][1]}
+    S.geo={lat:d?.latitude??null,lon:d?.longitude??null,country:d?.country||null,code:d?.country_code||null};
+  }catch(e){}
+  if(S.geo.lat==null||S.geo.lon==null){
+    const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
+    const m={
+      "Europe/Vilnius":{lang:"lt",name:"Lithuania",code:"LT",lat:54.6872,lon:25.2797},
+      "Europe/Oslo":{lang:"no",name:"Norway",code:"NO",lat:59.9139,lon:10.7522},
+      "Europe/Amsterdam":{lang:"nl",name:"Netherlands",code:"NL",lat:52.3676,lon:4.9041},
+      "Europe/Berlin":{lang:"de",name:"Germany",code:"DE",lat:52.52,lon:13.405},
+      "Europe/Warsaw":{lang:"pl",name:"Poland",code:"PL",lat:52.2297,lon:21.0122}
+    };
+    if(m[tz]){choice=m[tz].lang;label=m[tz].name;S.geo={lat:m[tz].lat,lon:m[tz].lon,country:m[tz].name,code:m[tz].code}}
   }
-  setLang(choice,false);byId("geoLabel").textContent=tr("detected")+": "+label;
+  setLang(manual&&saved?saved:choice,false);
+  byId("geoLabel").textContent=tr("detected")+": "+label;
+  await syncBuyerGeo();
+  await refreshRankedFeed();
 }
-
 function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));byId(v+"View").classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
 function categories(){return ["All",...new Set(S.lots.map(x=>x.category).filter(Boolean))]}
 function renderCats(){byId("catChips").innerHTML=categories().map(c=>'<button class="chip '+(S.cat===c?'active':'')+'" onclick="S.cat=\''+esc(c).replace(/&#39;/g,"\\'")+'\';renderCats();renderMarket()">'+esc(c)+'</button>').join("")}
 function renderBrands(){const s=byId("brandSel"),cur=s.value;s.innerHTML='<option value="">All brands</option>'+[...new Set(S.lots.map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option>'+esc(b)+'</option>').join("");s.value=cur}
 function filtered(){
   const q=(byId("globalSearch").value||"").toLowerCase().trim(),cond=byId("conditionSel").value,brand=byId("brandSel").value,mn=Number(byId("minPrice").value||0),mx=Number(byId("maxPrice").value||0),wOnly=byId("watchOnly").checked,bOnly=byId("bidsOnly").checked;
-  let a=S.lots.filter(x=>(S.cat==="All"||x.category===S.cat)&&(!cond||x.condition===cond)&&(!brand||x.brand===brand)&&(!mn||Number(x.current_bid)>=mn)&&(!mx||Number(x.current_bid)<=mx)&&(!wOnly||S.watch.has(x.id))&&(!bOnly||S.myBids.has(x.id))&&(!q||[x.title,x.brand,x.model,x.category,auction(x.auction_id)?.title,house(auction(x.auction_id)?.house_id)?.name].join(" ").toLowerCase().includes(q)));
-  if(S.sort==="ending")a.sort((a,b)=>new Date(a.ends_at)-new Date(b.ends_at));if(S.sort==="hot")a.sort((a,b)=>b.bid_count-a.bid_count);if(S.sort==="priceLow")a.sort((a,b)=>a.current_bid-b.current_bid);if(S.sort==="priceHigh")a.sort((a,b)=>b.current_bid-a.current_bid);return a
+  let a=(S.ranked||S.lots).filter(x=>(S.cat==="All"||x.category===S.cat)&&(!cond||x.condition===cond)&&(!brand||x.brand===brand)&&(!mn||Number(x.current_bid)>=mn)&&(!mx||Number(x.current_bid)<=mx)&&(!wOnly||S.watch.has(x.id))&&(!bOnly||S.myBids.has(x.id))&&(!q||[x.title,x.brand,x.model,x.category,auction(x.auction_id)?.title,house(auction(x.auction_id)?.house_id)?.name].join(" ").toLowerCase().includes(q)));
+  if(S.sort==="recommended"&&S.ranked)a.sort((a,b)=>(b._score||0)-(a._score||0));if(S.sort==="ending")a.sort((a,b)=>new Date(a.ends_at)-new Date(b.ends_at));if(S.sort==="hot")a.sort((a,b)=>b.bid_count-a.bid_count);if(S.sort==="priceLow")a.sort((a,b)=>a.current_bid-b.current_bid);if(S.sort==="priceHigh")a.sort((a,b)=>b.current_bid-a.current_bid);return a
 }
 function itemCard(x){
   const a=auction(x.auction_id),h=house(a?.house_id),my=S.myBids.get(x.id),img=(x.image_urls||[])[0]||a?.cover_url||"";
-  return '<article class="item"><div class="photo" onclick="openItem(\''+x.id+'\')"><img loading="lazy" src="'+esc(img)+'" alt="'+esc(x.title)+'"><button class="fav '+(S.watch.has(x.id)?'on':'')+'" onclick="event.stopPropagation();toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+'</button>'+(x.bid_count>=15?'<span class="hot">🔥 '+x.bid_count+' bids</span>':'')+'<span class="tag">'+esc(x.condition||"Used")+'</span></div><div class="ib"><div class="meta">'+esc(h?.name||"Auction house")+' · '+esc(x.category||"Equipment")+'</div><h3>'+esc(x.title)+'</h3><div class="desc">'+esc(x.brand||"")+' · '+esc(x.model||"")+'</div><div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+'</small></div><div class="row"><span>'+(my?'<span class="status blue">MY BID '+fmt(my)+'</span>':status(x.qa_status))+'</span><span>'+tr("ends")+' '+hoursLeft(x.ends_at)+'h</span></div></div></article>'
+  return '<article class="item"><div class="photo" onclick="openItem(\''+x.id+'\')"><img loading="lazy" src="'+esc(img)+'" alt="'+esc(x.title)+'"><button class="fav '+(S.watch.has(x.id)?'on':'')+'" onclick="event.stopPropagation();toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+'</button>'+(x.bid_count>=15?'<span class="hot">🔥 '+x.bid_count+' bids</span>':'')+'<span class="tag">'+esc(x.condition||"Used")+'</span></div><div class="ib"><div class="meta">'+esc(h?.name||"Auction house")+' · '+esc(x.category||"Equipment")+'</div><h3>'+esc(x.title)+'</h3><div class="desc">'+esc(x.brand||"")+' · '+esc(x.model||"")+'</div>'+(x._distance!=null?'<div class="row"><span>📍 '+x._distance+' km</span><span>'+((x._reasons||[]).includes("NEARBY_25KM")?"Near you":((x._reasons||[]).includes("SHIPPING_AVAILABLE")?"Shipping available":"Smart reach"))+'</span></div>':'')+'<div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+'</small></div><div class="row"><span>'+(my?'<span class="status blue">MY BID '+fmt(my)+'</span>':status(x.qa_status))+'</span><span>'+tr("ends")+' '+hoursLeft(x.ends_at)+'h</span></div></div></article>'
 }
 function renderMarket(){
   const a=filtered();byId("resultCount").textContent=a.length+" "+tr("results");byId("marketGrid").innerHTML=a.length?a.map(itemCard).join(""):'<div class="empty" style="grid-column:1/-1"><b>No matching equipment</b>Try changing filters or search terms.</div>';
   byId("endingGrid").innerHTML=[...S.lots].sort((a,b)=>new Date(a.ends_at)-new Date(b.ends_at)).slice(0,4).map(itemCard).join("");
   byId("hotGrid").innerHTML=[...S.lots].sort((a,b)=>b.bid_count-a.bid_count).slice(0,4).map(itemCard).join("");
+  a.slice(0,20).forEach(x=>{if(!S.impressed.has(x.id)){S.impressed.add(x.id);trackEvent(x.id,"impression",x._distance)}});
 }
 function auctionCard(a){
   const h=house(a.house_id),ls=S.lots.filter(x=>x.auction_id===a.id),reg=S.regs.has(a.id);
@@ -113,10 +147,11 @@ function renderAuctionDetail(id){
 }
 function focusAuction(id){renderAuctionDetail(id);showView("auctionDetail")}
 
+function trackEvent(lotId,type,distance=null,metadata={}){db.rpc("record_marketplace_event",{p_lot_id:lotId||null,p_event_type:type,p_distance_km:distance,p_session_id:S.sessionId,p_metadata:metadata}).catch(()=>{})}
 async function toggleWatch(lotId){
   if(!S.user){openAuth("signin");return}
-  if(S.watch.has(lotId)){const {error}=await db.from("watchlist").delete().eq("user_id",S.user.id).eq("lot_id",lotId);if(!error){S.watch.delete(lotId);toast(tr("favRemoved"))}}
-  else{const {error}=await db.from("watchlist").insert({user_id:S.user.id,lot_id:lotId});if(!error){S.watch.add(lotId);toast(tr("favAdded"))}}
+  if(S.watch.has(lotId)){const {error}=await db.from("watchlist").delete().eq("user_id",S.user.id).eq("lot_id",lotId);if(!error){S.watch.delete(lotId);trackEvent(lotId,"watch_remove",S.lots.find(x=>x.id===lotId)?._distance);toast(tr("favRemoved"))}}
+  else{const {error}=await db.from("watchlist").insert({user_id:S.user.id,lot_id:lotId});if(!error){S.watch.add(lotId);trackEvent(lotId,"watch_add",S.lots.find(x=>x.id===lotId)?._distance);toast(tr("favAdded"))}}
   renderAll()
 }
 function renderWatch(){const a=S.lots.filter(x=>S.watch.has(x.id));byId("watchGrid").innerHTML=a.length?a.map(itemCard).join(""):'<div class="empty" style="grid-column:1/-1"><b>'+tr("watchlist")+'</b>'+tr("watchSub")+'</div>'}
@@ -125,7 +160,7 @@ function renderBids(){const a=S.lots.filter(x=>S.myBids.has(x.id));byId("bidsGri
 async function registerAuction(id){
   if(!S.user){openAuth("signin");return}
   const {error}=await db.from("auction_registrations").upsert({auction_id:id,user_id:S.user.id,approved:true});
-  if(error){toast(error.message);return}S.regs.add(id);toast(tr("registered"));renderAuctions();if(byId("auctionDetailView")?.classList.contains("active"))renderAuctionDetail(id)
+  if(error){toast(error.message);return}S.regs.add(id);trackEvent(null,"auction_register",null,{auction_id:id});toast(tr("registered"));renderAuctions();if(byId("auctionDetailView")?.classList.contains("active"))renderAuctionDetail(id)
 }
 async function placeBid(lotId){
   if(!S.user){openAuth("signin");return}
@@ -133,10 +168,10 @@ async function placeBid(lotId){
   const amount=Number(byId("bidAmount").value||0);const {data,error}=await db.rpc("place_bid",{p_lot_id:lotId,p_amount:amount});
   if(error){toast(error.message.replace("BID_TOO_LOW","Bid too low").replace("REGISTRATION_REQUIRED","Register for this auction first"));return}
   if(data){const i=S.lots.findIndex(v=>v.id===lotId);if(i>=0)S.lots[i]=data}
-  S.myBids.set(lotId,amount);toast(tr("bidPlaced"));openItem(lotId);renderAll()
+  S.myBids.set(lotId,amount);trackEvent(lotId,"bid",x?._distance,{amount});toast(tr("bidPlaced"));openItem(lotId);renderAll()
 }
 async function openItem(id){
-  const x=S.lots.find(v=>v.id===id);if(!x)return;const a=auction(x.auction_id),h=house(a?.house_id),imgs=x.image_urls||[];
+  const x=S.lots.find(v=>v.id===id);if(!x)return;trackEvent(id,"detail_view",x._distance);const a=auction(x.auction_id),h=house(a?.house_id),imgs=x.image_urls||[];
   const {data:hist}=await db.from("bids").select("amount,created_at,bidder_id").eq("lot_id",id).order("created_at",{ascending:false}).limit(6);
   const thumbHtml=imgs.map(u=>'<img src="'+esc(u)+'" onclick="byId(\'detailMainImg\').src=this.src">').join("");
   byId("modal").className="modal";byId("modal").innerHTML='<div class="modalbox"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div><div class="gallerymain"><img id="detailMainImg" src="'+esc(imgs[0]||a?.cover_url||"")+'" alt="'+esc(x.title)+'"></div><div class="thumbrow">'+thumbHtml+'</div><div class="row"><span>📷 '+Math.max(imgs.length,1)+' inspection photos</span><span>Lot #'+x.lot_number+'</span></div></div><div><div class="eyebrow">'+esc(a?.title||"Auction")+'</div><h2>'+esc(x.title)+'</h2><div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+' · '+x.bid_count+' bids</small></div><div class="specs"><div class="spec"><small>'+tr("brand")+'</small><b>'+esc(x.brand||"—")+'</b></div><div class="spec"><small>'+tr("model")+'</small><b>'+esc(x.model||"—")+'</b></div><div class="spec"><small>'+tr("category")+'</small><b>'+esc(x.category||"—")+'</b></div><div class="spec"><small>'+tr("conditionLabel")+'</small><b>'+esc(x.condition||"—")+'</b></div><div class="spec"><small>'+tr("qaLabel")+'</small>'+status(x.qa_status)+'</div><div class="spec"><small>'+tr("ends")+'</small><b>'+hoursLeft(x.ends_at)+'h</b></div></div><p class="muted" style="line-height:1.6">'+esc(x.description||"")+'</p><div class="notice">Buyer premium: '+Number(a?.buyer_premium||0)+'% · '+esc(a?.pickup_info||"Pickup terms provided by seller")+'</div><div class="bidbox"><div class="eyebrow">'+tr("placeBid")+'</div><div class="bidrow"><input id="bidAmount" type="number" min="'+(Number(x.current_bid)+Number(x.min_increment))+'" value="'+(Number(x.current_bid)+Number(x.min_increment))+'"><button class="btn primary" onclick="placeBid(\''+x.id+'\')">'+tr("placeBid")+'</button></div><div class="bidstatus">'+tr("maxBid")+' · minimum next '+fmt(Number(x.current_bid)+Number(x.min_increment))+'</div><div class="history"><b>'+tr("bidHistory")+'</b>'+((hist||[]).length?(hist||[]).map((v,i)=>'<div class="historyline"><span>Bidder '+(i+1)+'</span><b>'+fmt(v.amount)+'</b></div>').join(""):'<div class="historyline"><span>No bids yet</span><b>—</b></div>')+'</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+' '+tr("watchlist")+'</button><button class="btn" onclick="toast(\''+tr("pickup").replace(/'/g,"\\'")+'\')">🚚 '+tr("pickup")+'</button></div><div class="seller"><b>✓ '+esc(h?.name||"Auction house")+'</b><span>'+tr("verified")+' · '+esc(a?.platform||"")+'</span></div></div></div></div>'
@@ -170,6 +205,7 @@ function showSearchSuggestions(){const q=byId("globalSearch").value.toLowerCase(
 function chooseSearch(v){byId("globalSearch").value=v;byId("suggestions").classList.add("hidden");renderMarket()}
 function setDensity(v){byId("gridBtn").classList.toggle("active",v==="grid");byId("compactBtn").classList.toggle("active",v==="compact");byId("marketGrid").style.gridTemplateColumns=v==="compact"?"repeat(auto-fill,minmax(180px,1fr))":""}
 function openFilterSheet(){document.body.classList.add("noScroll");byId("modal").className="sheet";byId("modal").innerHTML='<div class="sheetbox"><div class="modalhead"><b style="margin-right:auto;font:700 23px Georgia">Refine results</b><button class="close" onclick="closeModal()">×</button></div><div class="fgroup"><label>'+tr("sort")+'</label><select id="mSort" class="control"><option value="recommended">Recommended</option><option value="ending">Ending soon</option><option value="hot">Most bids</option><option value="priceLow">Price: low to high</option><option value="priceHigh">Price: high to low</option></select></div><div class="fgroup"><label>'+tr("condition")+'</label><select id="mCond" class="control"><option value="">Any condition</option><option>Excellent</option><option>Good</option><option>Used</option><option>For parts</option></select></div><div class="fgroup"><label>'+tr("brand")+'</label><select id="mBrand" class="control"><option value="">All brands</option>'+[...new Set(S.lots.map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option>'+esc(b)+'</option>').join("")+'</select></div><button class="btn primary full" style="margin-top:12px" onclick="applyMobileFilters()">Apply filters</button></div>';byId("mSort").value=S.sort;byId("mCond").value=byId("conditionSel").value;byId("mBrand").value=byId("brandSel").value}
+async function setNearRadius(v){S.radius=v?Number(v):null;await syncBuyerGeo();await refreshRankedFeed()}
 function applyMobileFilters(){S.sort=byId("mSort").value;byId("sortSel").value=S.sort;byId("conditionSel").value=byId("mCond").value;byId("brandSel").value=byId("mBrand").value;closeModal();renderMarket()}
 
 async function handleFiles(files){
@@ -197,7 +233,7 @@ function renderVisuals(){
 }
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth()]);

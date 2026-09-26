@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="lt">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -92,7 +92,7 @@ const TYPES=Object.keys(TYPE_LABELS.lt);
 const RULESET={id:'lt-prelim-v0.2',country:'LT',sourceLabel:'Configurable preliminary residential profile',status:'needs-review',airflowDefaults:{living:30,bedroom:25,office:25,kitchen:40,bathroom:30,wc:25,utility:20,hall:0,vestibule:0,technical:20,other:15},ducts:{75:{maxFlow:30},90:{maxFlow:50}},maxRoute:25,maxBends:8,balanceTolerancePct:10};
 const role=t=>['living','bedroom','office'].includes(t)?'supply':['kitchen','bathroom','wc','utility','technical'].includes(t)?'extract':'transit';
 const duct=q=>q<=RULESET.ducts[75].maxFlow?{diameter:75,lines:1}:q<=RULESET.ducts[90].maxFlow?{diameter:90,lines:1}:{diameter:75,lines:Math.ceil(q/RULESET.ducts[75].maxFlow)};
-function defaultState(){return{lang:'lt',projectName:'Gyvenamojo namo vėdinimas',cloudProjectId:null,floors:[{id:'f1',name:'1 aukštas',level:0,calibrated:true,scale:.012,bg:null,riser:{x:900,y:100}}],selectedFloorId:'f1',unit:{floorId:'f1',x:760,y:120},rooms:[
+function defaultState(){return{lang:'en',projectName:'Residential ventilation',cloudProjectId:null,floors:[{id:'f1',name:'1 aukštas',level:0,calibrated:true,scale:.012,bg:null,riser:{x:900,y:100}}],selectedFloorId:'f1',unit:{floorId:'f1',x:760,y:120},rooms:[
 {id:'r1',floorId:'f1',name:'Svetainė / Valgomasis',type:'living',area:35.3,h:2.7,x:80,y:300,w:430,hpx:280,airflow:45},
 {id:'r2',floorId:'f1',name:'Virtuvė',type:'kitchen',area:8.42,h:2.7,x:80,y:160,w:260,hpx:130,airflow:40},
 {id:'r3',floorId:'f1',name:'Holas',type:'hall',area:3.51,h:2.7,x:350,y:160,w:120,hpx:130,airflow:0},
@@ -103,7 +103,7 @@ function defaultState(){return{lang:'lt',projectName:'Gyvenamojo namo vėdinimas
 let state=defaultState(),selected='r1',selectedZone=null,tool='select',panel='inspector',history=[],future=[],interaction=null,calPts=[];
 function t(k){return (I18N[state.lang]&&I18N[state.lang][k])||I18N.lt[k]||k}function typeLabel(k){return TYPE_LABELS[state.lang][k]||k}
 function cloneState(){return JSON.parse(JSON.stringify(state))}function pushHistory(){history.push(cloneState());if(history.length>40)history.shift();future=[]}function undo(){if(!history.length)return;future.push(cloneState());state=history.pop();selected=state.rooms.find(r=>r.floorId===state.selectedFloorId)?.id||null;render()}function redo(){if(!future.length)return;history.push(cloneState());state=future.pop();selected=state.rooms.find(r=>r.floorId===state.selectedFloorId)?.id||null;render()}
-function save(){localStorage.setItem('ventplan_v2',JSON.stringify(state));toast(t('saved'))}function load(){let x=localStorage.getItem('ventplan_v2')||localStorage.getItem('ventplan');if(x)try{const parsed=JSON.parse(x);state={...defaultState(),...parsed,terminalOverrides:parsed.terminalOverrides||{},noGoZones:parsed.noGoZones||[],calibrationLines:parsed.calibrationLines||{},lang:parsed.lang||'lt'};state.floors=state.floors.map(f=>({...f,riser:f.riser||{x:900,y:100}}))}catch{}}load();
+function save(){localStorage.setItem('ventplan_v2',JSON.stringify(state));toast(t('saved'))}function load(){let x=localStorage.getItem('ventplan_v2')||localStorage.getItem('ventplan');if(x)try{const parsed=JSON.parse(x);state={...defaultState(),...parsed,terminalOverrides:parsed.terminalOverrides||{},noGoZones:parsed.noGoZones||[],calibrationLines:parsed.calibrationLines||{},lang:parsed.lang||'en'};state.floors=state.floors.map(f=>({...f,riser:f.riser||{x:900,y:100}}))}catch{}}load();
 function setLang(lang){state.lang=lang;document.documentElement.lang=lang;saveSilent();render()}function saveSilent(){localStorage.setItem('ventplan_v2',JSON.stringify(state))}
 function terminalForRoom(r){const ov=state.terminalOverrides[r.id]||{};return{...duct(r.airflow),id:'t'+r.id,roomId:r.id,floorId:r.floorId,role:role(r.type),airflow:r.airflow,x:ov.x??(r.x+r.w/2),y:ov.y??(r.y+r.hpx/2),manual:!!ov.manual}}
 function terminals(){return state.rooms.filter(r=>role(r.type)!=='transit'&&r.airflow>0).map(terminalForRoom)}

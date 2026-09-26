@@ -87,14 +87,16 @@ async function refreshRankedFeed(){
 async function detectLang(){
   const map={LT:"lt",NO:"no",DE:"de",AT:"de",CH:"de",PL:"pl",NL:"nl",BE:"nl"};
   const manual=localStorage.getItem("auctioneer-lang-manual")==="1",saved=localStorage.getItem("auctioneer-lang");
+  const geoConsent=localStorage.getItem("auctioneer-geo-consent");
   let choice=(navigator.language||"en").slice(0,2).toLowerCase();if(!I18N[choice])choice="en";let label="browser";
+  let resolved={lat:null,lon:null,country:null,code:null};
   try{
     const r=await fetch(SB_URL+"/functions/v1/geo",{cache:"no-store"});const d=await r.json();
     if(d?.country_code&&map[String(d.country_code).toUpperCase()])choice=map[String(d.country_code).toUpperCase()];
     label=d?.country||d?.country_code||label;
-    S.geo={lat:d?.latitude??null,lon:d?.longitude??null,country:d?.country||null,code:d?.country_code||null};
+    resolved={lat:d?.latitude??null,lon:d?.longitude??null,country:d?.country||null,code:d?.country_code||null};
   }catch(e){}
-  if(S.geo.lat==null||S.geo.lon==null){
+  if(!resolved.code){
     const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";
     const m={
       "Europe/Vilnius":{lang:"lt",name:"Lithuania",code:"LT",lat:54.6872,lon:25.2797},
@@ -103,13 +105,26 @@ async function detectLang(){
       "Europe/Berlin":{lang:"de",name:"Germany",code:"DE",lat:52.52,lon:13.405},
       "Europe/Warsaw":{lang:"pl",name:"Poland",code:"PL",lat:52.2297,lon:21.0122}
     };
-    if(m[tz]){choice=m[tz].lang;label=m[tz].name;S.geo={lat:m[tz].lat,lon:m[tz].lon,country:m[tz].name,code:m[tz].code}}
+    if(m[tz]){choice=m[tz].lang;label=m[tz].name;resolved={lat:m[tz].lat,lon:m[tz].lon,country:m[tz].name,code:m[tz].code}}
   }
+  S.geo=geoConsent==="yes"?resolved:{lat:null,lon:null,country:resolved.country,code:resolved.code};
   setLang(manual&&saved?saved:choice,false);
-  byId("geoLabel").textContent=tr("detected")+": "+label;
+  byId("geoLabel").textContent=tr("detected")+": "+label+(geoConsent==="yes"?" · Near me on":"");
+  if(geoConsent===null)showGeoConsent();
   await syncBuyerGeo();
   await refreshRankedFeed();
 }
+function showGeoConsent(){
+  const box=byId("privacyBanner");if(!box)return;
+  box.innerHTML='<div><b>Use approximate location for nearby lots?</b><span>We use country/city-level location to rank local equipment. You can browse without it.</span></div><div><button class="btn sm" onclick="setGeoConsent(false)">Not now</button><button class="btn primary sm" onclick="setGeoConsent(true)">Use Near me</button></div>';
+  box.classList.remove("hidden");
+}
+async function setGeoConsent(allow){
+  localStorage.setItem("auctioneer-geo-consent",allow?"yes":"no");
+  byId("privacyBanner")?.classList.add("hidden");
+  await detectLang();
+}
+
 function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));const target=byId(v+"View");if(target)target.classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="seller")renderSeller();if(v==="orders")renderOrders();if(v==="notifications")renderNotifications();if(v==="admin")renderAdmin();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
 function categories(){return ["All",...new Set(S.lots.map(x=>x.category).filter(Boolean))]}
 function renderCats(){byId("catChips").innerHTML=categories().map(c=>'<button class="chip '+(S.cat===c?'active':'')+'" onclick="S.cat=\''+esc(c).replace(/&#39;/g,"\\'")+'\';renderCats();renderMarket()">'+esc(c)+'</button>').join("")}
@@ -121,7 +136,7 @@ function filtered(){
 }
 function itemCard(x){
   const a=auction(x.auction_id),h=house(a?.house_id),my=S.myBids.get(x.id),img=(x.image_urls||[])[0]||a?.cover_url||"";
-  return '<article class="item"><div class="photo" onclick="openItem(\''+x.id+'\')"><img loading="lazy" src="'+esc(img)+'" alt="'+esc(x.title)+'"><button class="fav '+(S.watch.has(x.id)?'on':'')+'" onclick="event.stopPropagation();toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+'</button>'+(x.bid_count>=15?'<span class="hot">🔥 '+x.bid_count+' bids</span>':'')+'<span class="tag">'+esc(x.condition||"Used")+'</span></div><div class="ib"><div class="meta">'+esc(h?.name||"Auction house")+' · '+esc(x.category||"Equipment")+'</div><h3>'+esc(x.title)+'</h3><div class="desc">'+esc(x.brand||"")+' · '+esc(x.model||"")+'</div>'+(x._distance!=null?'<div class="row"><span>📍 '+x._distance+' km</span><span>'+((x._reasons||[]).includes("NEARBY_25KM")?"Near you":((x._reasons||[]).includes("SHIPPING_AVAILABLE")?"Shipping available":"Smart reach"))+'</span></div>':'')+'<div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+'</small></div><div class="row"><span>'+(my?'<span class="status blue">MY BID '+fmt(my)+'</span>':status(x.qa_status))+'</span><span>'+tr("ends")+' '+hoursLeft(x.ends_at)+'h</span></div></div></article>'
+  return '<article class="item"><div class="photo" onclick="openItem(\''+x.id+'\')"><img loading="lazy" src="'+esc(img)+'" alt="'+esc(x.title)+'"><button class="fav '+(S.watch.has(x.id)?'on':'')+'" onclick="event.stopPropagation();toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+'</button>'+(a?.is_demo?'<span class="demoBadge">DEMO</span>':'')+(x.bid_count>=15?'<span class="hot">🔥 '+x.bid_count+' bids</span>':'')+'<span class="tag">'+esc(x.condition||"Used")+'</span></div><div class="ib"><div class="meta">'+esc(h?.name||"Auction house")+' · '+esc(x.category||"Equipment")+'</div><h3>'+esc(x.title)+'</h3><div class="desc">'+esc(x.brand||"")+' · '+esc(x.model||"")+'</div>'+(x._distance!=null?'<div class="row"><span>📍 '+x._distance+' km</span><span>'+((x._reasons||[]).includes("NEARBY_25KM")?"Near you":((x._reasons||[]).includes("SHIPPING_AVAILABLE")?"Shipping available":"Smart reach"))+'</span></div>':'')+'<div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+'</small></div><div class="row"><span>'+(my?'<span class="status blue">MY BID '+fmt(my)+'</span>':status(x.qa_status))+'</span><span>'+tr("ends")+' '+hoursLeft(x.ends_at)+'h</span></div></div></article>'
 }
 function renderMarket(){
   const a=filtered();byId("resultCount").textContent=a.length+" "+tr("results");byId("marketGrid").innerHTML=a.length?a.map(itemCard).join(""):'<div class="empty" style="grid-column:1/-1"><b>No matching equipment</b>Try changing filters or search terms.</div>';
@@ -131,7 +146,7 @@ function renderMarket(){
 }
 function auctionCard(a){
   const h=house(a.house_id),ls=S.lots.filter(x=>x.auction_id===a.id),reg=S.regs.has(a.id);
-  return '<article class="auction"><div class="auctioncover"><img loading="lazy" src="'+esc(a.cover_url||"")+'"><div class="auctiontxt"><small>'+esc(a.platform||a.status)+'</small><h3>'+esc(a.title)+'</h3><div>✓ '+esc(h?.name||"Auction house")+'</div></div></div><div class="auctionbody"><div class="stats"><div class="stat"><small>Lots</small><b>'+ls.length+'</b></div><div class="stat"><small>GREEN</small><b>'+ls.filter(x=>x.qa_status==="GREEN").length+'</b></div><div class="stat"><small>Bids</small><b>'+ls.reduce((s,x)=>s+x.bid_count,0)+'</b></div><div class="stat"><small>Ends</small><b>'+hoursLeft(a.ends_at)+'h</b></div></div><div class="row"><span class="status green">✓ '+tr("verified")+'</span><div style="display:flex;gap:5px"><button class="btn sm" onclick="registerAuction(\''+a.id+'\')">'+(reg?tr("registered"):tr("register"))+'</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Open</button></div></div></div></article>'
+  return '<article class="auction"><div class="auctioncover"><img loading="lazy" src="'+esc(a.cover_url||"")+'">'+(a.is_demo?'<span class="demoBadge auctionDemo">DEMO INVENTORY</span>':'')+'<div class="auctiontxt"><small>'+esc(a.platform||a.status)+'</small><h3>'+esc(a.title)+'</h3><div>✓ '+esc(h?.name||"Auction house")+'</div></div></div><div class="auctionbody"><div class="stats"><div class="stat"><small>Lots</small><b>'+ls.length+'</b></div><div class="stat"><small>GREEN</small><b>'+ls.filter(x=>x.qa_status==="GREEN").length+'</b></div><div class="stat"><small>Bids</small><b>'+ls.reduce((s,x)=>s+x.bid_count,0)+'</b></div><div class="stat"><small>Ends</small><b>'+hoursLeft(a.ends_at)+'h</b></div></div><div class="row"><span class="status green">✓ '+tr("verified")+'</span><div style="display:flex;gap:5px"><button class="btn sm" onclick="registerAuction(\''+a.id+'\')">'+(reg?tr("registered"):tr("register"))+'</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Open</button></div></div></div></article>'
 }
 function renderAuctions(){byId("featuredAuctions").innerHTML=S.auctions.slice(0,3).map(auctionCard).join("");byId("allAuctions").innerHTML=S.auctions.map(auctionCard).join("")}
 function renderAuctionDetail(id){
@@ -147,6 +162,18 @@ function renderAuctionDetail(id){
 }
 function focusAuction(id){const u=new URL(location.href);u.searchParams.delete("lot");u.searchParams.set("auction",id);history.pushState({auction:id},"",u);renderAuctionDetail(id);showView("auctionDetail")}
 
+function reportClientError(message,source=null,lineNo=null,colNo=null,stack=null){
+  db.rpc("record_client_error",{
+    p_session_id:S.sessionId,
+    p_message:String(message||"Unknown error"),
+    p_source:source,
+    p_line_no:lineNo,
+    p_col_no:colNo,
+    p_stack:stack,
+    p_page_url:location.href,
+    p_user_agent:navigator.userAgent
+  }).catch(()=>{})
+}
 function trackEvent(lotId,type,distance=null,metadata={}){db.rpc("record_marketplace_event",{p_lot_id:lotId||null,p_event_type:type,p_distance_km:distance,p_session_id:S.sessionId,p_metadata:metadata}).catch(()=>{})}
 async function toggleWatch(lotId){
   if(!S.user){openAuth("signin");return}
@@ -170,7 +197,9 @@ async function confirmAuctionRegistration(id){
 }
 async function placeBid(lotId){
   if(!S.user){openAuth("signin");return}
-  const x=S.lots.find(v=>v.id===lotId);if(!S.regs.has(x.auction_id)){toast("Register for this auction first");return}
+  const x=S.lots.find(v=>v.id===lotId),a=auction(x?.auction_id);
+  if(a?.is_demo||S.platform?.bidding_enabled===false){toast("Demo / preview inventory — real bidding is currently disabled");return}
+  if(!S.regs.has(x.auction_id)){toast("Register for this auction first");return}
   const amount=Number(byId("bidAmount").value||0);const {data,error}=await db.rpc("place_bid",{p_lot_id:lotId,p_amount:amount});
   if(error){toast(error.message.replace("BID_TOO_LOW","Bid too low").replace("REGISTRATION_REQUIRED","Register for this auction first"));return}
   if(data){const i=S.lots.findIndex(v=>v.id===lotId);if(i>=0)S.lots[i]=data}
@@ -212,7 +241,7 @@ async function openItem(id){
   const x=S.lots.find(v=>v.id===id);if(!x)return;const u=new URL(location.href);u.searchParams.set("lot",id);history.pushState({lot:id},"",u);trackEvent(id,"detail_view",x._distance);const a=auction(x.auction_id),h=house(a?.house_id),imgs=x.image_urls||[];
   const {data:hist}=await db.from("public_bid_history").select("amount,created_at").eq("lot_id",id).order("created_at",{ascending:false}).limit(6);
   const thumbHtml=imgs.map(u=>'<img src="'+esc(u)+'" onclick="byId(\'detailMainImg\').src=this.src">').join("");
-  byId("modal").className="modal";byId("modal").innerHTML='<div class="modalbox"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div><div class="gallerymain"><img id="detailMainImg" src="'+esc(imgs[0]||a?.cover_url||"")+'" alt="'+esc(x.title)+'"></div><div class="thumbrow">'+thumbHtml+'</div><div class="row"><span>📷 '+Math.max(imgs.length,1)+' inspection photos</span><span>Lot #'+x.lot_number+'</span></div></div><div><div class="eyebrow">'+esc(a?.title||"Auction")+'</div><h2>'+esc(x.title)+'</h2><div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+' · '+x.bid_count+' bids</small></div><div class="specs"><div class="spec"><small>'+tr("brand")+'</small><b>'+esc(x.brand||"—")+'</b></div><div class="spec"><small>'+tr("model")+'</small><b>'+esc(x.model||"—")+'</b></div><div class="spec"><small>'+tr("category")+'</small><b>'+esc(x.category||"—")+'</b></div><div class="spec"><small>'+tr("conditionLabel")+'</small><b>'+esc(x.condition||"—")+'</b></div><div class="spec"><small>'+tr("qaLabel")+'</small>'+status(x.qa_status)+'</div><div class="spec"><small>'+tr("ends")+'</small><b>'+hoursLeft(x.ends_at)+'h</b></div></div><p class="muted" style="line-height:1.6">'+esc(x.description||"")+'</p><div class="notice">Buyer premium: '+Number(a?.buyer_premium||0)+'% · '+esc(a?.pickup_info||"Pickup terms provided by seller")+'</div><div class="bidbox"><div class="eyebrow">'+tr("placeBid")+'</div><div class="bidrow"><input id="bidAmount" type="number" min="'+(Number(x.current_bid)+Number(x.min_increment))+'" value="'+(Number(x.current_bid)+Number(x.min_increment))+'" oninput="updateFeeQuote(\''+x.id+'\')"><button class="btn primary" onclick="placeBid(\''+x.id+'\')">'+tr("placeBid")+'</button></div><div class="bidstatus">'+tr("maxBid")+' · minimum next '+fmt(Number(x.current_bid)+Number(x.min_increment))+' · your maximum stays private</div><div class="notice" style="margin-top:8px">Proxy bidding automatically bids only as much as needed. '+(x.reserve_price!=null?(x.reserve_met?'✓ Reserve met':'Reserve not met'):'No reserve disclosed')+' · soft close '+Math.round(Number(x.soft_close_seconds||120)/60)+' min</div><div id="feeQuote" class="feeQuote"></div><div class="history"><b>'+tr("bidHistory")+'</b>'+((hist||[]).length?(hist||[]).map((v,i)=>'<div class="historyline"><span>Bidder '+(i+1)+'</span><b>'+fmt(v.amount)+'</b></div>').join(""):'<div class="historyline"><span>No bids yet</span><b>—</b></div>')+'</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+' '+tr("watchlist")+'</button><button class="btn" onclick="toast(\''+tr("pickup").replace(/'/g,"\\'")+'\')">🚚 '+tr("pickup")+'</button><button class="btn" onclick="openReportLot(\''+x.id+'\')">⚑ Report</button></div><div class="seller"><b>✓ '+esc(h?.name||"Auction house")+'</b><span>'+tr("verified")+' · '+esc(a?.platform||"")+'</span></div></div></div></div>';updateFeeQuote(id)
+  byId("modal").className="modal";byId("modal").innerHTML='<div class="modalbox"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div class="detail"><div><div class="gallerymain"><img id="detailMainImg" src="'+esc(imgs[0]||a?.cover_url||"")+'" alt="'+esc(x.title)+'"></div><div class="thumbrow">'+thumbHtml+'</div><div class="row"><span>📷 '+Math.max(imgs.length,1)+' inspection photos</span><span>Lot #'+x.lot_number+'</span></div></div><div><div class="eyebrow">'+esc(a?.title||"Auction")+'</div><h2>'+esc(x.title)+'</h2><div class="price">'+fmt(x.current_bid)+' <small>'+tr("currentBid")+' · '+x.bid_count+' bids</small></div><div class="specs"><div class="spec"><small>'+tr("brand")+'</small><b>'+esc(x.brand||"—")+'</b></div><div class="spec"><small>'+tr("model")+'</small><b>'+esc(x.model||"—")+'</b></div><div class="spec"><small>'+tr("category")+'</small><b>'+esc(x.category||"—")+'</b></div><div class="spec"><small>'+tr("conditionLabel")+'</small><b>'+esc(x.condition||"—")+'</b></div><div class="spec"><small>'+tr("qaLabel")+'</small>'+status(x.qa_status)+'</div><div class="spec"><small>'+tr("ends")+'</small><b>'+hoursLeft(x.ends_at)+'h</b></div></div><p class="muted" style="line-height:1.6">'+esc(x.description||"")+'</p>'+(a?.is_demo?'<div class="notice demoNotice"><b>Demo inventory</b> · This listing is for preview/testing only. Real bidding and payment are disabled.</div>':'')+'<div class="notice">Buyer premium: '+Number(a?.buyer_premium||0)+'% · '+esc(a?.pickup_info||"Pickup terms provided by seller")+'</div><div class="bidbox"><div class="eyebrow">'+tr("placeBid")+'</div><div class="bidrow"><input id="bidAmount" type="number" min="'+(Number(x.current_bid)+Number(x.min_increment))+'" value="'+(Number(x.current_bid)+Number(x.min_increment))+'" oninput="updateFeeQuote(\''+x.id+'\')"><button class="btn primary" onclick="placeBid(\''+x.id+'\')">'+tr("placeBid")+'</button></div><div class="bidstatus">'+tr("maxBid")+' · minimum next '+fmt(Number(x.current_bid)+Number(x.min_increment))+' · your maximum stays private</div><div class="notice" style="margin-top:8px">Proxy bidding automatically bids only as much as needed. '+(x.reserve_price!=null?(x.reserve_met?'✓ Reserve met':'Reserve not met'):'No reserve disclosed')+' · soft close '+Math.round(Number(x.soft_close_seconds||120)/60)+' min</div><div id="feeQuote" class="feeQuote"></div><div class="history"><b>'+tr("bidHistory")+'</b>'+((hist||[]).length?(hist||[]).map((v,i)=>'<div class="historyline"><span>Bidder '+(i+1)+'</span><b>'+fmt(v.amount)+'</b></div>').join(""):'<div class="historyline"><span>No bids yet</span><b>—</b></div>')+'</div></div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn" onclick="toggleWatch(\''+x.id+'\')">'+(S.watch.has(x.id)?'♥':'♡')+' '+tr("watchlist")+'</button><button class="btn" onclick="toast(\''+tr("pickup").replace(/'/g,"\\'")+'\')">🚚 '+tr("pickup")+'</button><button class="btn" onclick="openReportLot(\''+x.id+'\')">⚑ Report</button></div><div class="seller"><b>✓ '+esc(h?.name||"Auction house")+'</b><span>'+tr("verified")+' · '+esc(a?.platform||"")+'</span></div></div></div></div>';updateFeeQuote(id)
 }
 function closeModal(){byId("modal").className="hidden";byId("modal").innerHTML="";document.body.classList.remove("noScroll");const u=new URL(location.href);if(u.searchParams.has("lot")){u.searchParams.delete("lot");history.replaceState({},"",u)}}
 
@@ -291,8 +320,8 @@ async function loadPlatformSettings(){
   const {data}=await db.from("platform_settings").select("*").eq("id",true).maybeSingle();
   S.platform=data||{};
   const banner=byId("systemBanner");if(!banner)return;
-  if(S.platform.maintenance_mode||S.platform.bidding_enabled===false){
-    banner.textContent=S.platform.maintenance_message||"Auctioneer is temporarily limiting bidding while we complete maintenance.";
+  if(S.platform.maintenance_mode||S.platform.bidding_enabled===false||S.platform.launch_mode!=="live"){
+    banner.textContent=S.platform.maintenance_message||("Auctioneer "+(S.platform.launch_mode||"preview")+" mode — real-money bidding is not enabled yet.");
     banner.classList.remove("hidden");
   }else banner.classList.add("hidden");
 }
@@ -486,12 +515,15 @@ async function markNotificationRead(id){
 }
 async function renderAdmin(){
   const box=byId("adminDashboard");if(!box)return;
-  const {data,error}=await db.rpc("admin_dashboard");
-  if(error||!data){box.innerHTML='<div class="empty"><b>Admin access required</b>This control room is restricted.</div>';return}
-  const d=data;
+  const [dash,gate]=await Promise.all([db.rpc("admin_dashboard"),db.rpc("launch_readiness")]);
+  if(dash.error||!dash.data){box.innerHTML='<div class="empty"><b>Admin access required</b>This control room is restricted.</div>';return}
+  const d=dash.data,g=gate.data||{};
   const metrics=[["Users",d.users],["Active auctions",d.active_auctions],["Open lots",d.open_lots],["GMV",fmt(d.gmv)],["Protection revenue",fmt(d.platform_revenue)],["Awaiting payment",d.awaiting_payment],["Open disputes",d.open_disputes],["Moderation",d.moderation_open],["Queued notifications",d.queued_notifications]];
-  box.innerHTML='<div class="ops">'+metrics.map(x=>'<div class="kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join("")+'</div><div class="notice" style="margin-top:16px">Admin actions remain server-side and are not exposed to ordinary accounts.</div>';
+  const blockers=(g.blockers||[]).map(x=>'<li>'+esc(x)+'</li>').join("");
+  const warnings=(g.warnings||[]).map(x=>'<li>'+esc(x)+'</li>').join("");
+  box.innerHTML='<div class="launchGate '+(g.ready_for_real_money_live?'ready':'blocked')+'"><div><div class="eyebrow">Launch Gate</div><h2>'+(g.ready_for_real_money_live?'Ready for real-money live':'Real-money launch blocked')+'</h2><p>Mode: '+esc(g.launch_mode||"preview")+'</p></div><div class="gateCols"><div><b>Blockers</b><ul>'+(blockers||'<li>None</li>')+'</ul></div><div><b>Warnings</b><ul>'+(warnings||'<li>None</li>')+'</ul></div></div></div><div class="ops">'+metrics.map(x=>'<div class="kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join("")+'</div>';
 }
+
 async function openLegal(slug){
   const {data}=await db.from("legal_documents").select("title,body_markdown,version,status,created_at").eq("slug",slug).eq("status","active").order("created_at",{ascending:false}).limit(1);
   if(!data?.length){toast("This document is pending final legal review");return}
@@ -527,10 +559,10 @@ async function handleDeepLink(){
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.startStripeOnboarding=startStripeOnboarding;window.syncStripeStatus=syncStripeStatus;window.startCheckout=startCheckout;window.downloadMyData=downloadMyData;window.startPayment=startPayment;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.setGeoConsent=setGeoConsent;window.startStripeOnboarding=startStripeOnboarding;window.syncStripeStatus=syncStripeStatus;window.startCheckout=startCheckout;window.downloadMyData=downloadMyData;window.startPayment=startPayment;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth(),syncServerTime(),loadPlatformSettings()]);
   renderAll();subscribeRealtime();await detectLang();await handleDeepLink();
-  document.addEventListener("click",e=>{if(!e.target.closest(".langwrap"))toggleLangMenu(false);if(!e.target.closest(".searchWrap"))byId("suggestions").classList.add("hidden")});window.addEventListener("popstate",()=>handleDeepLink());setInterval(syncServerTime,60000);
+  document.addEventListener("click",e=>{if(!e.target.closest(".langwrap"))toggleLangMenu(false);if(!e.target.closest(".searchWrap"))byId("suggestions").classList.add("hidden")});window.addEventListener("error",e=>reportClientError(e.message,e.filename,e.lineno,e.colno,e.error?.stack));window.addEventListener("unhandledrejection",e=>reportClientError("Unhandled promise rejection",null,null,null,e.reason?.stack||String(e.reason)));window.addEventListener("popstate",()=>handleDeepLink());setInterval(syncServerTime,60000);
 })();

@@ -257,6 +257,71 @@ function renderVisuals(){
   const ls=S.lots.filter(x=>x.auction_id===top.id),bids=ls.reduce((s,x)=>s+x.bid_count,0),ready=ls.length?Math.round(ls.filter(x=>x.qa_status==="GREEN").length/ls.length*100):0;
   byId("visualStrip").innerHTML='<div class="visualHero"><img src="'+esc(top.cover_url||"")+'"><div class="visualText"><div class="eyebrow" style="color:#e9f5ed">Most active sale</div><h3>'+esc(top.title)+'</h3><div>'+bids+' bids · '+ls.length+' lots · '+hoursLeft(top.ends_at)+'h left</div></div></div><div class="visualStat"><div><div class="eyebrow">Catalog readiness</div><h3 style="font:700 31px Georgia;margin:8px 0">'+ready+'%</h3><div class="bar"><i style="width:'+ready+'%"></i></div></div><p class="muted">Human-reviewed lot data prepared for bidding and export.</p></div><div class="visualStat"><div><div class="eyebrow">Marketplace activity</div><h3 style="font:700 31px Georgia;margin:8px 0">'+S.lots.reduce((s,x)=>s+x.bid_count,0)+'</h3><div class="bar"><i style="width:'+Math.min(100,S.lots.reduce((s,x)=>s+x.bid_count,0)/4)+'%"></i></div></div><p class="muted">Total bidding activity across current demo inventory.</p></div>'
 }
+
+async function syncServerTime(){
+  const t0=Date.now();
+  const {data}=await db.rpc("server_time");
+  const t1=Date.now();
+  if(data)serverOffsetMs=new Date(data).getTime()-((t0+t1)/2);
+}
+async function renderOrders(){
+  const box=byId("ordersList");if(!box)return;
+  if(!S.user){box.innerHTML='<div class="empty"><b>Sign in required</b>Your won lots and transactions will appear here.</div>';return}
+  const {data,error}=await db.from("orders").select("*").order("created_at",{ascending:false});
+  if(error){box.innerHTML='<div class="empty"><b>Could not load orders</b>'+esc(error.message)+'</div>';return}
+  box.innerHTML=(data||[]).length?(data||[]).map(o=>{
+    const l=S.lots.find(x=>x.id===o.lot_id);
+    return '<div class="orderCard"><div><div class="eyebrow">'+esc(o.status)+'</div><h3>'+esc(l?.title||"Auction purchase")+'</h3><div class="muted">'+fmt(o.hammer_price)+' hammer · '+fmt(o.protection_fee)+' protection</div></div><div class="orderAmount"><small>Total</small><b>'+fmt(o.total_amount)+'</b></div><div class="orderActions">'+((o.status==="paid"||o.status==="awaiting_pickup")?'<button class="btn sm" onclick="issuePickupCode(\''+o.id+'\')">Pickup code</button>':'')+((["paid","awaiting_pickup","collected"].includes(o.status))?'<button class="btn sm" onclick="openDispute(\''+o.id+'\')">Report issue</button>':'')+'</div></div>';
+  }).join(""):'<div class="empty"><b>No orders yet</b>Won lots will appear here after an auction closes.</div>';
+}
+async function issuePickupCode(orderId){
+  const {data,error}=await db.rpc("issue_handover_code",{p_order_id:orderId});
+  if(error){toast(error.message);return}
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:440px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 28px;text-align:center"><div class="eyebrow">Secure handover</div><h2 style="font:700 30px Georgia">Pickup code</h2><div class="pickupCode">'+esc(data)+'</div><p class="muted">Give this code to the seller only when the item is physically handed over.</p></div></div>';
+}
+function openDispute(orderId){
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:540px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Buyer Protection</div><h2 style="font:700 28px Georgia">Report a transaction issue</h2><select id="disputeReason" class="control"><option value="not_received">Item not received</option><option value="materially_not_as_described">Materially not as described</option><option value="wrong_item">Wrong item</option><option value="damaged_in_handover">Damaged during handover</option><option value="other">Other</option></select><textarea id="disputeText" class="control" style="margin-top:8px;min-height:110px" placeholder="Describe the issue and available evidence"></textarea><button class="btn primary full" style="margin-top:10px" onclick="submitDispute(\''+orderId+'\')">Submit dispute</button></div></div>';
+}
+async function submitDispute(orderId){
+  const {error}=await db.from("disputes").insert({order_id:orderId,opened_by:S.user.id,reason:byId("disputeReason").value,description:byId("disputeText").value});
+  if(error){toast(error.message);return}
+  toast("Dispute opened");closeModal();renderOrders();
+}
+async function renderNotifications(){
+  const box=byId("notificationsList");if(!box)return;
+  if(!S.user){box.innerHTML='<div class="empty"><b>Sign in required</b></div>';return}
+  const {data,error}=await db.from("notifications").select("*").order("created_at",{ascending:false}).limit(100);
+  if(error){box.innerHTML='<div class="empty"><b>Could not load notifications</b></div>';return}
+  box.innerHTML=(data||[]).length?(data||[]).map(n=>'<button class="notificationCard '+(n.status==="read"?"":"unread")+'" onclick="markNotificationRead(\''+n.id+'\')"><b>'+esc(n.title)+'</b><span>'+esc(n.body)+'</span><small>'+new Date(n.created_at).toLocaleString()+'</small></button>').join(""):'<div class="empty"><b>No notifications</b></div>';
+}
+async function markNotificationRead(id){
+  await db.from("notifications").update({status:"read"}).eq("id",id);
+  renderNotifications();
+}
+async function renderAdmin(){
+  const box=byId("adminDashboard");if(!box)return;
+  const {data,error}=await db.rpc("admin_dashboard");
+  if(error||!data){box.innerHTML='<div class="empty"><b>Admin access required</b>This control room is restricted.</div>';return}
+  const d=data;
+  const metrics=[["Users",d.users],["Active auctions",d.active_auctions],["Open lots",d.open_lots],["GMV",fmt(d.gmv)],["Protection revenue",fmt(d.platform_revenue)],["Awaiting payment",d.awaiting_payment],["Open disputes",d.open_disputes],["Moderation",d.moderation_open],["Queued notifications",d.queued_notifications]];
+  box.innerHTML='<div class="ops">'+metrics.map(x=>'<div class="kpi"><small>'+x[0]+'</small><b>'+x[1]+'</b></div>').join("")+'</div><div class="notice" style="margin-top:16px">Admin actions remain server-side and are not exposed to ordinary accounts.</div>';
+}
+async function openLegal(slug){
+  const {data}=await db.from("legal_documents").select("title,body_markdown,version,status,created_at").eq("slug",slug).eq("status","active").order("created_at",{ascending:false}).limit(1);
+  if(!data?.length){toast("This document is pending final legal review");return}
+  const d=data[0];
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:760px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><article class="legalDoc"><div class="eyebrow">Version '+esc(d.version)+'</div><h2>'+esc(d.title)+'</h2><p>'+esc(d.body_markdown).replace(/\n/g,"</p><p>")+'</p></article></div>';
+}
+async function handleDeepLink(){
+  const u=new URL(location.href);
+  const lot=u.searchParams.get("lot"),auc=u.searchParams.get("auction");
+  if(auc&&auction(auc)){renderAuctionDetail(auc);showView("auctionDetail")}
+  if(lot&&S.lots.some(x=>x.id===lot))await openItem(lot);
+}
+
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
 window.S=S;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;

@@ -26,6 +26,32 @@
 @media(max-width:980px){.plannerWelcome{margin:10px;grid-template-columns:1fr;min-height:0}.plannerWelcomeImg{height:180px}.stats{overflow:auto;display:flex}.stat{min-width:135px}.plan{min-width:680px}}
 </style>
 
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style id="vent-planner-premium-v3">
+:root{--font-display:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;--font-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif}
+html,body{font-family:var(--font-body)!important;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,h4,.brand,.panelTabs button,.toolBtn,button{font-family:var(--font-display)!important}.top h1{font-weight:800!important;letter-spacing:-.025em}.top p{font-size:12px!important;line-height:1.45}.brand small{font-family:var(--font-body)!important}
+.customerGuide{font-family:var(--font-body)!important}.customerGuide strong{font-family:var(--font-display)!important;font-weight:800}.customerGuide .gstep{font-size:11px!important;line-height:1.2!important}.customerGuide a{font-family:var(--font-display)!important;font-weight:700}
+.side h4{font-family:var(--font-display)!important;font-weight:800!important;font-size:10px!important}.side button{font-size:12px!important;line-height:1.25!important}
+.top button,.langSwitch button{font-size:12px!important;font-weight:700!important}.top .actions>a{font-family:var(--font-display)!important;font-weight:700!important}
+.plannerWelcomeCopy h2{font-family:var(--font-display)!important;font-size:27px!important;line-height:1.1!important;letter-spacing:-.03em!important}.plannerWelcomeCopy p{font-size:13px!important;line-height:1.55!important}.plannerQuick button{font-size:11px!important;font-weight:700!important}
+.stat span{font-size:10px!important}.stat b{font-family:var(--font-display)!important;font-size:19px!important}.toolbar{font-size:12px!important}.toolBtn{font-size:11px!important;font-weight:700!important}
+.panelBody{font-size:13px!important}.panelBody h3{font-family:var(--font-display)!important;font-size:15px!important;font-weight:800}.panelBody label{font-size:11px!important}.panelBody input,.panelBody select{font-size:13px!important}.check b{font-size:11px!important}.check small{font-size:10px!important;line-height:1.45!important}
+.modalBox h2{font-family:var(--font-display)!important;font-weight:800!important}.modalBox p{font-size:13px!important}.authField{font-size:16px!important}
+@media(max-width:980px){
+ .customerGuide{padding:10px 12px!important}.customerGuide>div:first-child{width:100%!important}.customerGuide .steps{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}.customerGuide .gstep{padding:9px 10px!important}.customerGuide>a{width:100%!important;text-align:center!important}
+ .top{padding:12px!important}.top .actions{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}.top .actions>a,.top .actions>button,.top .actions>.langSwitch{width:100%!important}.langSwitch{display:grid!important;grid-template-columns:repeat(3,1fr)!important}.langSwitch button{min-height:40px!important}
+ .plannerWelcome{margin:10px!important}.plannerWelcomeCopy{padding:20px!important}.plannerWelcomeCopy h2{font-size:25px!important}.plannerQuick{display:grid!important;grid-template-columns:1fr 1fr!important}.plannerQuick button{min-height:42px!important}.plannerWelcomeImg{height:200px!important}
+ .stats{gap:8px!important;padding:10px!important}.stat{min-width:145px!important;padding:11px!important}.grid{padding:0 10px 82px!important;gap:10px!important}
+ .canvasWrap{border-radius:0!important}.plan{height:58vh!important;min-height:520px!important}.inspector{max-height:none!important}.panelTabs button{font-size:11px!important;min-height:44px!important}
+ .mobilebar{display:grid!important;grid-template-columns:repeat(5,1fr)!important;gap:5px!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom))!important}.mobilebar button{font-family:var(--font-display)!important;font-size:9px!important;line-height:1.15!important;min-height:50px!important}
+}
+@media(max-width:620px){
+ .customerGuide .steps{grid-template-columns:1fr!important}.customerGuide .gstep{font-size:10px!important}.plannerWelcomeCopy h2{font-size:23px!important}.plannerWelcomeCopy p{font-size:12px!important}.plannerQuick{grid-template-columns:1fr!important}.plannerWelcomeImg{height:160px!important}
+ .top h1{font-size:19px!important}.top .actions{grid-template-columns:1fr!important}.stats{overflow-x:auto!important}.stat{min-width:135px!important}.grid{grid-template-columns:1fr!important}.toolbar{align-items:flex-start!important;flex-direction:column!important}.toolbarRight{white-space:normal!important}.plan{min-width:760px!important;height:55vh!important}
+}
+</style>
 </head>
 <body>
 <div class="customerGuide">

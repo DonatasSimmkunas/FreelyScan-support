@@ -123,6 +123,21 @@
     <div id="bidsGrid" class="grid"></div>
   </section>
 
+  <section id="ordersView" class="view">
+    <div class="sectionhead"><div><div class="eyebrow">Transactions</div><h2>My orders</h2><p>Won lots, payment status, pickup and dispute windows.</p></div></div>
+    <div id="ordersList" class="orderList"></div>
+  </section>
+
+  <section id="notificationsView" class="view">
+    <div class="sectionhead"><div><div class="eyebrow">Activity</div><h2>Notifications</h2><p>Outbid, wins, payment and pickup updates.</p></div></div>
+    <div id="notificationsList" class="notificationList"></div>
+  </section>
+
+  <section id="adminView" class="view">
+    <div class="sectionhead"><div><div class="eyebrow">Control room</div><h2>Admin dashboard</h2><p>Marketplace health, orders, disputes and moderation.</p></div></div>
+    <div id="adminDashboard"></div>
+  </section>
+
   <section id="opsView" class="view">
     <div class="sectionhead"><div><div class="eyebrow">Auctioneer Ops</div><h2 data-i18n="opsTitle">Catalog operations</h2><p data-i18n="opsSub">The professional layer behind the cozy marketplace.</p></div><button class="btn primary" onclick="downloadAllCsv()" data-i18n="exportAll">Export all CSV</button></div>
     <div class="ops" id="opsKpis"></div>
@@ -141,6 +156,16 @@
     <div class="drop"><strong data-i18n="dropTitle">Drop equipment photos here</strong><span data-i18n="dropSub">JPG, PNG or WEBP. Multiple photos per lot are supported.</span><br><input type="file" multiple accept="image/*" onchange="handleFiles(this.files)"></div>
     <div class="section panel hidden" id="intakePreview"></div>
   </section>
+  <footer class="footer">
+    <div><b>Auctioneer</b><span>Tools, equipment & business auctions</span></div>
+    <div class="footerLinks">
+      <button onclick="openLegal('auction-rules')">Auction rules</button>
+      <button onclick="openLegal('prohibited-items')">Prohibited items</button>
+      <button onclick="openLegal('buyer-protection')">Buyer Protection</button>
+      <button onclick="openLegal('privacy')">Privacy</button>
+    </div>
+    <div class="muted">Server-authoritative bidding · Soft close · Proxy max bids</div>
+  </footer>
 </main>
 
 <nav class="bottomNav">

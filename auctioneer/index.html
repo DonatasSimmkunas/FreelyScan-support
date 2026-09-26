@@ -21,7 +21,7 @@
       <div id="suggestions" class="suggestions hidden"></div>
     </div>
     <div class="topactions">
-      <button class="btn" onclick="showView('ops')" data-i18n="forHouses">For auction houses</button>
+      <button class="btn" onclick="showView('seller')" data-i18n="forHouses">For auction houses</button>
       <button class="btn primary" onclick="showView('intake')" data-i18n="addInventory">+ Add inventory</button>
       <button id="accountBtn" class="accountChip" onclick="openAccount()"><span class="avatar">U</span><span id="accountLabel">Sign in</span></button>
       <div class="langwrap">
@@ -121,6 +121,11 @@
   <section id="bidsView" class="view">
     <div class="sectionhead"><div><div class="eyebrow">My activity</div><h2 data-i18n="myBids">My bids</h2><p>Realtime bidding activity tied to your account.</p></div></div>
     <div id="bidsGrid" class="grid"></div>
+  </section>
+
+  <section id="sellerView" class="view">
+    <div class="sectionhead"><div><div class="eyebrow">Sell with Auctioneer</div><h2>Auction house console</h2><p>Onboard your business, create auctions and prepare lots for publishing.</p></div></div>
+    <div id="sellerConsole"></div>
   </section>
 
   <section id="ordersView" class="view">

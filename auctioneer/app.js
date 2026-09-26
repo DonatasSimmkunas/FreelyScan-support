@@ -159,8 +159,14 @@ function renderBids(){const a=S.lots.filter(x=>S.myBids.has(x.id));byId("bidsGri
 
 async function registerAuction(id){
   if(!S.user){openAuth("signin");return}
-  const {error}=await db.from("auction_registrations").upsert({auction_id:id,user_id:S.user.id,approved:true});
-  if(error){toast(error.message);return}S.regs.add(id);trackEvent(null,"auction_register",null,{auction_id:id});toast(tr("registered"));renderAuctions();if(byId("auctionDetailView")?.classList.contains("active"))renderAuctionDetail(id)
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:540px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Auction registration</div><h2 style="font:700 30px Georgia;margin:6px 0">Review auction rules</h2><p class="muted" style="line-height:1.6">Bids may be binding. Server time is authoritative. Maximum bids use proxy bidding and late bids may extend the auction under soft-close rules.</p><label class="consentBox"><input id="rulesConsent" type="checkbox"> <span>I accept the Auction Rules for this auction.</span></label><div style="display:flex;gap:8px;margin-top:14px"><button class="btn" onclick="openLegal(\'auction-rules\')">Read rules</button><button class="btn primary" onclick="confirmAuctionRegistration(\''+id+'\')">Register</button></div></div></div>'
+}
+async function confirmAuctionRegistration(id){
+  if(!byId("rulesConsent")?.checked){toast("Please accept the Auction Rules");return}
+  const {error}=await db.rpc("register_for_auction",{p_auction_id:id,p_accept_rules:true});
+  if(error){toast(error.message);return}
+  S.regs.add(id);trackEvent(null,"auction_register",null,{auction_id:id});toast(tr("registered"));closeModal();renderAuctions();if(byId("auctionDetailView")?.classList.contains("active"))renderAuctionDetail(id)
 }
 async function placeBid(lotId){
   if(!S.user){openAuth("signin");return}

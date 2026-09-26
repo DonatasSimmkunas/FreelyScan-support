@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auctioneer Status</title>
+<meta name="robots" content="noindex">
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;background:#f8f5ef;color:#26322b;margin:0;padding:32px}
+.card{max-width:640px;margin:auto;background:white;border:1px solid #ded8ce;border-radius:18px;padding:24px}
+.row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #eee8df}
+.ok{color:#287648;font-weight:800}.bad{color:#a33;font-weight:800}
+small{color:#6d756f}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Auctioneer status</h1>
+<p id="summary"><small>Checking service…</small></p>
+<div class="row"><span>Marketplace</span><b id="market">Checking…</b></div>
+<div class="row"><span>Last check</span><span id="time">—</span></div>
+<p><small>This page checks the public Auctioneer health endpoint only. Payment and internal operational details are intentionally not exposed.</small></p>
+</div>
+<script>
+(async()=>{
+  try{
+    const r=await fetch("https://hvsbczirrxzzhuxlsbwe.supabase.co/functions/v1/health",{cache:"no-store"});
+    const d=await r.json();
+    document.getElementById("market").textContent=d.ok?"Operational":"Degraded";
+    document.getElementById("market").className=d.ok?"ok":"bad";
+    document.getElementById("summary").innerHTML=d.ok?"<b class='ok'>All public systems operational</b>":"<b class='bad'>Service issue detected</b>";
+    document.getElementById("time").textContent=new Date(d.time||Date.now()).toLocaleString();
+  }catch(e){
+    document.getElementById("market").textContent="Unavailable";
+    document.getElementById("market").className="bad";
+    document.getElementById("summary").innerHTML="<b class='bad'>Health check unavailable</b>";
+  }
+})();
+</script>
+</body>
+</html>

@@ -179,9 +179,9 @@ h1{font-weight:800!important;line-height:1.02!important;letter-spacing:-.045em!i
   <div class="projectType" data-project="reno"><b>♻️ Renovation</b><small>Upgrade an existing property</small></div>
 </div>
 <div class="finder">
-  <label class="finderField"><span>Project type</span><select id="finderProject"><option>Residential</option><option>Commercial</option><option>Renovation</option><option>New build</option></select></label>
-  <label class="finderField"><span>Approx. floor area</span><div class="inputSuffix"><input id="finderArea" type="number" min="10" value="120"><b>m²</b></div></label>
-  <label class="finderField"><span>Main need</span><select id="finderNeed"><option value="unit">Ventilation unit / HRV</option><option value="ducts">Ducts & fittings</option><option value="fans">Fans</option><option value="accessories">Accessories / controls</option></select></label>
+  <label class="finderField"><span id="finderProjectLabel">Project type</span><select id="finderProject"><option value="res">Residential</option><option value="commercial">Commercial</option><option value="reno">Renovation</option><option value="new">New build</option></select></label>
+  <label class="finderField"><span id="finderAreaLabel">Approx. floor area</span><div class="inputSuffix"><input id="finderArea" type="number" min="10" value="120"><b>m²</b></div></label>
+  <label class="finderField"><span id="finderNeedLabel">Main need</span><select id="finderNeed"><option value="unit">Ventilation unit / HRV</option><option value="ducts">Ducts & fittings</option><option value="fans">Fans</option><option value="accessories">Accessories / controls</option></select></label>
   <button class="btn primary finderBtn" id="finderBtn">Find products →</button>
 </div>
 </div></section>
@@ -316,7 +316,36 @@ function countryName(c){let x=countries[c]||countries.LT;return x[state.lang==="
 function ship(p,c){const z=countries[c]||countries.LT,v=p.dimensionsMm?.m3||.02,w=+p.weightKg||1,b=Math.max(w,v*220);let n=z[3]+b*z[4]+v*z[5];if(w>30)n+=18+z[6];if(w>150)n+=65+z[6]*2;if(v>1.2)n+=22;return Math.ceil(n*2)/2}
 function uniq(k){return [...new Set(state.all.map(x=>x[k]).filter(Boolean))].sort()}
 function fill(id,a){$(id).innerHTML=`<option value="">${tr("all")}</option>`+a.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");hydrateBrandImages($("#recentRow"))}
-function renderLang(){document.documentElement.lang=state.lang;document.querySelectorAll("[data-t]").forEach(el=>el.textContent=tr(el.dataset.t));document.querySelectorAll("[data-ph]").forEach(el=>el.placeholder=tr(el.dataset.ph));$("#langSelect").value=state.lang;$("#sort").innerHTML=`<option value="featured">${tr("featured")}</option><option value="priceAsc">${tr("priceAsc")}</option><option value="priceDesc">${tr("priceDesc")}</option><option value="name">${tr("name")}</option>`;renderCountries();render()}
+function renderDiscoveryLanguage(){
+ const L={
+  en:{
+   projectTypes:{res:["🏠 Residential","Homes & apartments"],commercial:["🏢 Commercial","Offices & public buildings"],new:["🛠️ New build","Plan ventilation from the start"],reno:["♻️ Renovation","Upgrade an existing property"]},
+   labels:{project:"Project type",area:"Approx. floor area",need:"Main need",find:"Find products →"},
+   projectOptions:{res:"Residential",commercial:"Commercial",reno:"Renovation",new:"New build"},
+   needOptions:{unit:"Ventilation unit / HRV",ducts:"Ducts & fittings",fans:"Fans",accessories:"Accessories / controls"}
+  },
+  lt:{
+   projectTypes:{res:["🏠 Gyvenamasis","Namai ir butai"],commercial:["🏢 Komercinis","Biurai ir visuomeniniai pastatai"],new:["🛠️ Nauja statyba","Ventiliacija projektuojama nuo pradžių"],reno:["♻️ Renovacija","Esamo pastato atnaujinimas"]},
+   labels:{project:"Projekto tipas",area:"Apytikslis plotas",need:"Pagrindinis poreikis",find:"Rasti produktus →"},
+   projectOptions:{res:"Gyvenamasis",commercial:"Komercinis",reno:"Renovacija",new:"Nauja statyba"},
+   needOptions:{unit:"Rekuperatorius / vėdinimo agregatas",ducts:"Ortakiai ir fasoninės dalys",fans:"Ventiliatoriai",accessories:"Priedai / valdymas"}
+  },
+  no:{
+   projectTypes:{res:["🏠 Bolig","Hus og leiligheter"],commercial:["🏢 Næring","Kontor og offentlige bygg"],new:["🛠️ Nybygg","Planlegg ventilasjon fra starten"],reno:["♻️ Renovering","Oppgrader eksisterende bygg"]},
+   labels:{project:"Prosjekttype",area:"Omtrentlig gulvareal",need:"Hovedbehov",find:"Finn produkter →"},
+   projectOptions:{res:"Bolig",commercial:"Næring",reno:"Renovering",new:"Nybygg"},
+   needOptions:{unit:"Ventilasjonsaggregat / HRV",ducts:"Kanaler og deler",fans:"Vifter",accessories:"Tilbehør / styring"}
+  }
+ }[state.lang]||null;
+ if(!L)return;
+ document.querySelectorAll("[data-project]").forEach(el=>{const x=L.projectTypes[el.dataset.project];if(x){el.querySelector("b").textContent=x[0];el.querySelector("small").textContent=x[1]}}); 
+ const a=$("#finderProjectLabel"),b=$("#finderAreaLabel"),c=$("#finderNeedLabel"),btn=$("#finderBtn");
+ if(a)a.textContent=L.labels.project;if(b)b.textContent=L.labels.area;if(c)c.textContent=L.labels.need;if(btn)btn.textContent=L.labels.find;
+ const psel=$("#finderProject");if(psel)[...psel.options].forEach(o=>{if(L.projectOptions[o.value])o.textContent=L.projectOptions[o.value]});
+ const nsel=$("#finderNeed");if(nsel)[...nsel.options].forEach(o=>{if(L.needOptions[o.value])o.textContent=L.needOptions[o.value]});
+}
+
+function renderLang(){document.documentElement.lang=state.lang;document.querySelectorAll("[data-t]").forEach(el=>el.textContent=tr(el.dataset.t));document.querySelectorAll("[data-ph]").forEach(el=>el.placeholder=tr(el.dataset.ph));$("#langSelect").value=state.lang;$("#sort").innerHTML=`<option value="featured">${tr("featured")}</option><option value="priceAsc">${tr("priceAsc")}</option><option value="priceDesc">${tr("priceDesc")}</option><option value="name">${tr("name")}</option>`;renderCountries();renderDiscoveryLanguage();renderCategories();render()}
 function renderCountries(){$("#country").innerHTML=Object.keys(countries).map(k=>`<option value="${k}">${k} · ${countryName(k)}</option>`).join("");$("#country").value=state.country}
 function categoryCopy(key){
  const M={en:{

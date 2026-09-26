@@ -248,11 +248,24 @@ function logoCluster(comps,w,h){
  }
  return best;
 }
-function avgBorder(ctx,x,y,w,h,CW,CH){
- const d=ctx.getImageData(0,0,CW,CH).data;let rr=0,gg=0,bb=0,n=0;const pad=Math.max(3,Math.round(Math.min(w,h)*.25));
- const x0=Math.max(0,x-pad),x1=Math.min(CW-1,x+w+pad),y0=Math.max(0,y-pad),y1=Math.min(CH-1,y+h+pad);
- for(let yy=y0;yy<=y1;yy+=2)for(let xx=x0;xx<=x1;xx+=2){if(xx>x&&xx<x+w&&yy>y&&yy<y+h)continue;const i=(yy*CW+xx)*4;const r=d[i],g=d[i+1],b=d[i+2];if(r+g+b<80)continue;rr+=r;gg+=g;bb+=b;n++}
- return n?[Math.round(rr/n),Math.round(gg/n),Math.round(bb/n)]:[238,241,243];
+function eraseRedLogoPixels(ctx,box,aw,ah,W,H){
+ const sx=W/aw,sy=H/ah;
+ let x0=Math.max(0,Math.floor(box.minx*sx)-4),x1=Math.min(W-1,Math.ceil((box.maxx+1)*sx)+4),y0=Math.max(0,Math.floor(box.miny*sy)-4),y1=Math.min(H-1,Math.ceil((box.maxy+1)*sy)+4);
+ const img=ctx.getImageData(0,0,W,H),d=img.data,mask=new Uint8Array((x1-x0+1)*(y1-y0+1)),mw=x1-x0+1,mh=y1-y0+1;
+ const red=(r,g,b,a)=>a>80&&r>105&&r-g>24&&r-b>24&&r>g*1.18&&r>b*1.15;
+ for(let yy=0;yy<mh;yy++)for(let xx=0;xx<mw;xx++){const X=x0+xx,Y=y0+yy,i=(Y*W+X)*4;if(red(d[i],d[i+1],d[i+2],d[i+3]))mask[yy*mw+xx]=1}
+ // Dilate slightly to remove red anti-aliased edges, but do not create a rectangle.
+ for(let pass=0;pass<3;pass++){const m2=mask.slice();for(let yy=1;yy<mh-1;yy++)for(let xx=1;xx<mw-1;xx++){const k=yy*mw+xx;if(mask[k])continue;let n=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)n+=mask[(yy+dy)*mw+xx+dx];if(n>=2)m2[k]=1}mask.set(m2)}
+ // Per row interpolate background from clean pixels immediately left and right of the logo.
+ for(let yy=0;yy<mh;yy++){
+   let first=-1,last=-1;for(let xx=0;xx<mw;xx++)if(mask[yy*mw+xx]){if(first<0)first=xx;last=xx}
+   if(first<0)continue;
+   const Y=y0+yy,lx=Math.max(0,x0+first-5),rx=Math.min(W-1,x0+last+5),li=(Y*W+lx)*4,ri=(Y*W+rx)*4;
+   const lc=[d[li],d[li+1],d[li+2]],rc=[d[ri],d[ri+1],d[ri+2]];
+   for(let xx=first;xx<=last;xx++){if(!mask[yy*mw+xx])continue;const X=x0+xx,i=(Y*W+X)*4,t=(xx-first)/Math.max(1,last-first);d[i]=Math.round(lc[0]*(1-t)+rc[0]*t);d[i+1]=Math.round(lc[1]*(1-t)+rc[1]*t);d[i+2]=Math.round(lc[2]*(1-t)+rc[2]*t);d[i+3]=255}
+ }
+ ctx.putImageData(img,0,0);
+ return {x:x0,y:y0,w:x1-x0+1,h:y1-y0+1};
 }
 async function buildBrandedImage(p){
  const key=p.sku+"|"+p.model;if(BRAND_IMAGE_CACHE.has(key))return BRAND_IMAGE_CACHE.get(key);
@@ -264,10 +277,11 @@ async function buildBrandedImage(p){
    const aw=Math.min(280,W),ah=Math.max(1,Math.round(H*aw/W)),ac=document.createElement("canvas");ac.width=aw;ac.height=ah;const ax=ac.getContext("2d",{willReadFrequently:true});ax.drawImage(canvas,0,0,aw,ah);
    const comps=redMaskComponents(ax.getImageData(0,0,aw,ah).data,aw,ah),box=logoCluster(comps,aw,ah);
    if(box){
-     const sx=W/aw,sy=H/ah,margin=Math.max(6,Math.round((box.maxy-box.miny+1)*sy*.55));
-     let x=Math.max(0,Math.round(box.minx*sx)-margin),y=Math.max(0,Math.round(box.miny*sy)-margin),rw=Math.min(W-x,Math.round((box.maxx-box.minx+1)*sx)+margin*2),rh=Math.min(H-y,Math.round((box.maxy-box.miny+1)*sy)+margin*2);
-     const col=avgBorder(ctx,x,y,rw,rh,W,H);ctx.save();ctx.fillStyle="rgb("+col.join(",")+")";ctx.shadowColor="rgba(0,0,0,.035)";ctx.shadowBlur=2;ctx.fillRect(x,y,rw,rh);ctx.restore();
-     const logo=await loadLogoBitmap(),aspect=logo.width/logo.height;let lw=rw*.88,lh=lw/aspect;if(lh>rh*.78){lh=rh*.78;lw=lh*aspect}ctx.drawImage(logo,x+(rw-lw)/2,y+(rh-lh)/2,lw,lh);
+     const clean=eraseRedLogoPixels(ctx,box,aw,ah,W,H),logo=await loadLogoBitmap(),aspect=logo.width/logo.height;
+     const targetW=Math.min(W*.28,Math.max(clean.w*1.08,clean.h*aspect*1.1));let lw=targetW,lh=lw/aspect;
+     if(lh>H*.11){lh=H*.11;lw=lh*aspect}
+     const cx=clean.x+clean.w/2,cy=clean.y+clean.h/2;
+     ctx.save();ctx.globalAlpha=.97;ctx.drawImage(logo,cx-lw/2,cy-lh/2,lw,lh);ctx.restore();
    }
    return canvas.toDataURL("image/webp",.9);
   }catch(e){console.warn("VENT IT image branding",p.sku,e);return imgUrl(p)}})();
@@ -308,7 +322,17 @@ function renderRecent(){const items=state.recent.map(id=>state.all.find(p=>p.id=
 function finderRun(){const need=$("#finderNeed").value;if(need==="unit")$("#category").value="Residential HRU";if(need==="ducts")$("#category").value="Ducts & Fittings";if(need==="fans")$("#category").value="Fans";if(need==="accessories")$("#category").value="Accessories";state.page=1;apply();document.querySelector("#shop").scrollIntoView({behavior:"smooth"})}
 
 function bind(){$("#langSelect").onchange=e=>{state.lang=e.target.value;state.langManual=true;sessionStorage.setItem("ventit-lang-manual-session","1");renderLang()};$("#country").onchange=e=>{state.country=e.target.value;render()};["q","category","family","orientation","connection","sort"].forEach(id=>$("#"+id).addEventListener(id==="q"?"input":"change",()=>{state.page=1;apply()}));$("#globalSearch").oninput=e=>{$("#q").value=e.target.value;state.page=1;apply()};$("#price").oninput=e=>{$("#priceLabel").textContent=money(+e.target.value);state.page=1;apply()};$("#weight").oninput=e=>{$("#weightLabel").textContent=e.target.value+" kg";state.page=1;apply()};document.querySelectorAll("[data-chip]").forEach(b=>b.onclick=()=>{state.chip=state.chip===b.dataset.chip?"":b.dataset.chip;document.querySelectorAll("[data-chip]").forEach(x=>x.classList.toggle("on",x.dataset.chip===state.chip));state.page=1;apply()});$("#finderBtn").onclick=finderRun;document.querySelectorAll("[data-project]").forEach(el=>el.onclick=()=>{const v=el.dataset.project;if(v==="res")$("#category").value="Residential HRU";else if(v==="commercial")$("#category").value="AmberAir Compact CXP";else $("#category").value="";state.page=1;apply();document.querySelector("#shop").scrollIntoView({behavior:"smooth"})});$("#mobileFiltersBtn").onclick=()=>{$("#filtersPanel").classList.toggle("mobileOpen");$("#overlay").classList.toggle("open",$("#filtersPanel").classList.contains("mobileOpen"))};$("#reset").onclick=()=>{["category","family","orientation","connection","q","globalSearch"].forEach(id=>$("#"+id).value="");$("#price").value=15000;$("#weight").value=450;state.chip="";document.querySelectorAll("[data-chip]").forEach(x=>x.classList.remove("on"));state.page=1;apply()}}
-async function detectLocale(){if(state.langManual)return;let country="";try{const g=await fetch("https://ipwho.is/?fields=success,country_code",{cache:"no-store"}).then(r=>r.json());if(g?.success&&g?.country_code)country=String(g.country_code).toUpperCase()}catch(e){console.warn("VENT IT direct geo",e)}if(!country)try{const g=await fetch("https://fihyzcabvrndsztlsufg.supabase.co/functions/v1/geo-locale?ts="+Date.now(),{cache:"no-store"}).then(r=>r.json());if(g?.country)country=String(g.country).toUpperCase()}catch(e){console.warn("VENT IT geo fallback",e)}let lang=country==="LT"?"lt":country==="NO"?"no":"en";if(!country){const nav=(navigator.languages?.[0]||navigator.language||"en").toLowerCase();lang=nav.startsWith("lt")?"lt":nav.startsWith("no")||nav.startsWith("nb")||nav.startsWith("nn")?"no":"en"}state.lang=lang;state.detectedCountry=country||null;if(country&&countries[country])state.country=country;console.info("VENT IT locale",{country,lang})}
+async function detectLocale(){if(state.langManual)return;let country="";
+ const providers=[
+   async()=>{const g=await fetch("https://api.country.is/",{cache:"no-store"}).then(r=>r.json());return g?.country||""},
+   async()=>{const g=await fetch("https://ipwho.is/?fields=success,country_code",{cache:"no-store"}).then(r=>r.json());return g?.success?g.country_code:""},
+   async()=>{const g=await fetch("https://fihyzcabvrndsztlsufg.supabase.co/functions/v1/geo-locale?ts="+Date.now(),{cache:"no-store"}).then(r=>r.json());return g?.country||""}
+ ];
+ for(const fn of providers){try{country=String(await fn()||"").toUpperCase();if(/^[A-Z]{2}$/.test(country))break}catch(e){console.warn("VENT IT geo provider",e)}}
+ if(!country){const tz=Intl.DateTimeFormat().resolvedOptions().timeZone||"";if(tz==="Europe/Vilnius")country="LT";else if(tz==="Europe/Oslo")country="NO"}
+ let lang=country==="LT"?"lt":country==="NO"?"no":"en";
+ if(!country){const nav=(navigator.languages?.[0]||navigator.language||"en").toLowerCase();lang=nav.startsWith("lt")?"lt":nav.startsWith("no")||nav.startsWith("nb")||nav.startsWith("nn")?"no":"en"}
+ state.lang=lang;state.detectedCountry=country||null;if(country&&countries[country])state.country=country;console.info("VENT IT locale",{country,lang})}
 async function init(){if(!sessionStorage.getItem("ventit-locale-migrated-v2")){localStorage.removeItem("ventit-lang-manual");localStorage.removeItem("ventit-lang");sessionStorage.setItem("ventit-locale-migrated-v2","1")}await detectLocale();state.all=await fetch(PRODUCT_API).then(r=>r.json());state.rows=[...state.all];fill("#category",uniq("category"));fill("#family",uniq("family"));fill("#orientation",uniq("orientation"));fill("#connection",uniq("connectionType"));renderCategories();bind();$("#priceLabel").textContent=money(15000);$("#weightLabel").textContent="450 kg";renderLang();apply();updateCounts();renderRecent()}
 window.setCategory=setCategory;window.go=go;window.toggleFav=toggleFav;window.showProduct=showProduct;window.closeModal=closeModal;
 init().catch(e=>{$("#meta").textContent="Catalog error: "+e.message;console.error(e)})

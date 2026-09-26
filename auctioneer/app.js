@@ -336,6 +336,30 @@ async function submitPrivacyRequest(){
   toast("Privacy request submitted");closeModal();
 }
 
+
+async function startStripeOnboarding(houseId){
+  if(!S.user){openAuth("signin");return}
+  const {data,error}=await db.functions.invoke("connect-onboarding",{body:{auction_house_id:houseId}});
+  if(error||!data?.url){toast(data?.detail||data?.error||error?.message||"Stripe onboarding unavailable");return}
+  location.href=data.url;
+}
+async function syncStripeStatus(houseId,quiet=false){
+  if(!S.user)return null;
+  const {data,error}=await db.functions.invoke("connect-status",{body:{auction_house_id:houseId}});
+  if(error){if(!quiet)toast(error.message);return null}
+  if(!quiet)toast(data?.status==="verified"?"Stripe verification complete":"Stripe verification still needs information");
+  return data;
+}
+async function startCheckout(orderId){
+  if(!S.user){openAuth("signin");return}
+  const {data,error}=await db.functions.invoke("payments-create",{body:{order_id:orderId}});
+  if(error||!data?.checkout_url){
+    toast(data?.error||data?.detail||error?.message||"Checkout unavailable");
+    return
+  }
+  location.href=data.checkout_url;
+}
+
 async function renderSeller(){
   const box=byId("sellerConsole");if(!box)return;
   if(!S.user){
@@ -350,7 +374,7 @@ async function renderSeller(){
   }
   const h=houses[0];
   const {data:aucs}=await db.from("auctions").select("*").eq("house_id",h.id).order("created_at",{ascending:false});
-  box.innerHTML='<div class="sellerHeader panel"><div><div class="eyebrow">Seller account</div><h2 style="font:700 28px Georgia;margin:5px 0">'+esc(h.name)+'</h2><div class="row"><span class="status '+(h.verification_status==="verified"?"green":"yellow")+'">'+esc(h.verification_status.toUpperCase())+'</span><span>'+esc(h.location||"")+'</span></div></div><div><button class="btn primary" onclick="openCreateAuction(\''+h.id+'\')">+ Create auction</button></div></div>'+
+  box.innerHTML='<div class="sellerHeader panel"><div><div class="eyebrow">Seller account</div><h2 style="font:700 28px Georgia;margin:5px 0">'+esc(h.name)+'</h2><div class="row"><span class="status '+(h.verification_status==="verified"?"green":"yellow")+'">'+esc(h.verification_status.toUpperCase())+'</span><span>'+esc(h.location||"")+'</span></div><div class="muted" style="margin-top:7px">'+(h.payouts_enabled?'Stripe transfers active':'Stripe/KYB verification required before payouts')+'</div></div><div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end">'+(h.payouts_enabled?'<button class="btn" onclick="syncStripeStatus(\''+h.id+'\')">Refresh Stripe status</button>':'<button class="btn" onclick="startStripeOnboarding(\''+h.id+'\')">Complete Stripe verification</button>')+'<button class="btn primary" onclick="openCreateAuction(\''+h.id+'\')">+ Create auction</button></div></div>'+
     '<div class="section"><div class="sectionhead"><div><div class="eyebrow">Your inventory</div><h2>Auctions</h2></div></div><div class="auctions">'+((aucs||[]).length?(aucs||[]).map(a=>'<article class="auction"><div class="auctionbody"><div class="eyebrow">'+esc(a.publication_status||"draft")+'</div><h3 style="font:700 20px Georgia;margin:5px 0">'+esc(a.title)+'</h3><div class="muted">'+new Date(a.ends_at).toLocaleString()+' · buyer premium '+Number(a.buyer_premium||0)+'%</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn sm" onclick="manageSellerAuction(\''+a.id+'\')">Manage</button><button class="btn sm" onclick="openCreateLot(\''+a.id+'\')">+ Add lot</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Preview</button></div></div></article>').join(""):'<div class="empty" style="grid-column:1/-1"><b>No auctions yet</b>Create your first timed auction.</div>')+'</div></div>';
 }
 
@@ -478,13 +502,32 @@ async function openLegal(slug){
 async function handleDeepLink(){
   const u=new URL(location.href);
   const lot=u.searchParams.get("lot"),auc=u.searchParams.get("auction");
+  const sellerAction=u.searchParams.get("seller"),houseId=u.searchParams.get("house");
+  const payment=u.searchParams.get("payment");
+  if(sellerAction==="connect-refresh"&&houseId){
+    await startStripeOnboarding(houseId);return
+  }
+  if(sellerAction==="connect-return"&&houseId){
+    await syncStripeStatus(houseId,true);
+    await loadPrivate();
+    showView("seller");
+    await renderSeller();
+    toast("Stripe status refreshed");
+    return
+  }
+  if(payment==="success"){
+    showView("orders");await renderOrders();toast("Payment submitted — waiting for Stripe confirmation");return
+  }
+  if(payment==="cancelled"){
+    showView("orders");await renderOrders();toast("Payment was cancelled");return
+  }
   if(auc&&auction(auc)){renderAuctionDetail(auc);showView("auctionDetail")}
   if(lot&&S.lots.some(x=>x.id===lot))await openItem(lot);
 }
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.downloadMyData=downloadMyData;window.startPayment=startPayment;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.startStripeOnboarding=startStripeOnboarding;window.syncStripeStatus=syncStripeStatus;window.startCheckout=startCheckout;window.downloadMyData=downloadMyData;window.startPayment=startPayment;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth(),syncServerTime(),loadPlatformSettings()]);

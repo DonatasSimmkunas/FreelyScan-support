@@ -229,8 +229,15 @@ async function saveSearch(){
   toast(tr("savedSearch"))
 }
 function searchInput(){renderMarket();showSearchSuggestions()}
-function showSearchSuggestions(){const q=byId("globalSearch").value.toLowerCase().trim(),box=byId("suggestions");let a=[];if(q)a=S.lots.filter(x=>[x.title,x.brand,x.model,x.category].join(" ").toLowerCase().includes(q)).slice(0,6);if(!a.length){box.classList.add("hidden");return}box.innerHTML=a.map(x=>'<button onclick="chooseSearch(\''+esc(x.title).replace(/&#39;/g,"\\'")+'\')"><span>'+esc(x.title)+'</span><small>'+esc(x.brand||"")+' · '+esc(x.model||"")+'</small></button>').join("");box.classList.remove("hidden")}
-function chooseSearch(v){byId("globalSearch").value=v;byId("suggestions").classList.add("hidden");renderMarket()}
+async function showSearchSuggestions(){
+  const q=byId("globalSearch").value.trim(),box=byId("suggestions");
+  if(q.length<2){box.classList.add("hidden");return}
+  const {data,error}=await db.rpc("search_lots",{p_query:q,p_limit:8});
+  if(error||!data?.length){box.classList.add("hidden");return}
+  box.innerHTML=data.map(x=>'<button onclick="chooseSearch(\''+esc(x.title).replace(/&#39;/g,"\\'")+'\',\''+x.lot_id+'\')"><span>'+esc(x.title)+'</span><small>'+esc(x.brand||"")+' · '+esc(x.model||"")+'</small></button>').join("");
+  box.classList.remove("hidden")
+}
+function chooseSearch(v,lotId=null){byId("globalSearch").value=v;byId("suggestions").classList.add("hidden");renderMarket();if(lotId){trackEvent(lotId,"search_click",null,{query:v});openItem(lotId)}}
 function setDensity(v){byId("gridBtn").classList.toggle("active",v==="grid");byId("compactBtn").classList.toggle("active",v==="compact");byId("marketGrid").style.gridTemplateColumns=v==="compact"?"repeat(auto-fill,minmax(180px,1fr))":""}
 function openFilterSheet(){document.body.classList.add("noScroll");byId("modal").className="sheet";byId("modal").innerHTML='<div class="sheetbox"><div class="modalhead"><b style="margin-right:auto;font:700 23px Georgia">Refine results</b><button class="close" onclick="closeModal()">×</button></div><div class="fgroup"><label>'+tr("sort")+'</label><select id="mSort" class="control"><option value="recommended">Recommended</option><option value="ending">Ending soon</option><option value="hot">Most bids</option><option value="priceLow">Price: low to high</option><option value="priceHigh">Price: high to low</option></select></div><div class="fgroup"><label>'+tr("condition")+'</label><select id="mCond" class="control"><option value="">Any condition</option><option>Excellent</option><option>Good</option><option>Used</option><option>For parts</option></select></div><div class="fgroup"><label>'+tr("brand")+'</label><select id="mBrand" class="control"><option value="">All brands</option>'+[...new Set(S.lots.map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option>'+esc(b)+'</option>').join("")+'</select></div><button class="btn primary full" style="margin-top:12px" onclick="applyMobileFilters()">Apply filters</button></div>';byId("mSort").value=S.sort;byId("mCond").value=byId("conditionSel").value;byId("mBrand").value=byId("brandSel").value}
 async function setNearRadius(v){S.radius=v?Number(v):null;await syncBuyerGeo();await refreshRankedFeed()}
@@ -265,6 +272,37 @@ async function syncServerTime(){
   const {data}=await db.rpc("server_time");
   const t1=Date.now();
   if(data)serverOffsetMs=new Date(data).getTime()-((t0+t1)/2);
+}
+
+
+async function loadPlatformSettings(){
+  const {data}=await db.from("platform_settings").select("*").eq("id",true).maybeSingle();
+  S.platform=data||{};
+  const banner=byId("systemBanner");if(!banner)return;
+  if(S.platform.maintenance_mode||S.platform.bidding_enabled===false){
+    banner.textContent=S.platform.maintenance_message||"Auctioneer is temporarily limiting bidding while we complete maintenance.";
+    banner.classList.remove("hidden");
+  }else banner.classList.add("hidden");
+}
+function openSupport(){
+  if(!S.user){openAuth("signin");return}
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Auctioneer Support</div><h2 style="font:700 28px Georgia">How can we help?</h2><select id="supportCategory" class="control"><option value="account">Account</option><option value="bidding">Bidding</option><option value="payment">Payment</option><option value="pickup">Pickup</option><option value="dispute">Dispute</option><option value="listing">Listing</option><option value="other">Other</option></select><input id="supportSubject" class="control" style="margin-top:8px" placeholder="Subject"><textarea id="supportMessage" class="control" style="margin-top:8px;min-height:120px" placeholder="Describe the problem"></textarea><button class="btn primary full" style="margin-top:10px" onclick="submitSupportTicket()">Send to support</button></div></div>';
+}
+async function submitSupportTicket(){
+  const {error}=await db.from("support_tickets").insert({user_id:S.user.id,category:byId("supportCategory").value,subject:byId("supportSubject").value,message:byId("supportMessage").value});
+  if(error){toast(error.message);return}
+  toast("Support request sent");closeModal();
+}
+function openPrivacyCenter(){
+  if(!S.user){openAuth("signin");return}
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">Privacy center</div><h2 style="font:700 28px Georgia">Your data</h2><p class="muted">Request an export, correction or deletion review. Requests are recorded for manual fulfillment until automated account tooling is added.</p><select id="privacyType" class="control"><option value="export">Export my data</option><option value="correct">Correct my data</option><option value="delete">Delete my account/data</option></select><textarea id="privacyDetails" class="control" style="margin-top:8px;min-height:90px" placeholder="Optional details"></textarea><button class="btn primary full" style="margin-top:10px" onclick="submitPrivacyRequest()">Submit request</button></div></div>';
+}
+async function submitPrivacyRequest(){
+  const {error}=await db.from("privacy_requests").insert({user_id:S.user.id,request_type:byId("privacyType").value,details:byId("privacyDetails").value||null});
+  if(error){toast(error.message);return}
+  toast("Privacy request submitted");closeModal();
 }
 
 async function renderSeller(){
@@ -377,10 +415,10 @@ async function handleDeepLink(){
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
-  await Promise.all([loadPublic(),initAuth(),syncServerTime()]);
+  await Promise.all([loadPublic(),initAuth(),syncServerTime(),loadPlatformSettings()]);
   renderAll();subscribeRealtime();await detectLang();await handleDeepLink();
   document.addEventListener("click",e=>{if(!e.target.closest(".langwrap"))toggleLangMenu(false);if(!e.target.closest(".searchWrap"))byId("suggestions").classList.add("hidden")});window.addEventListener("popstate",()=>handleDeepLink());setInterval(syncServerTime,60000);
 })();

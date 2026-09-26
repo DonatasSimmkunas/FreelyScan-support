@@ -332,8 +332,46 @@ async function renderSeller(){
   const h=houses[0];
   const {data:aucs}=await db.from("auctions").select("*").eq("house_id",h.id).order("created_at",{ascending:false});
   box.innerHTML='<div class="sellerHeader panel"><div><div class="eyebrow">Seller account</div><h2 style="font:700 28px Georgia;margin:5px 0">'+esc(h.name)+'</h2><div class="row"><span class="status '+(h.verification_status==="verified"?"green":"yellow")+'">'+esc(h.verification_status.toUpperCase())+'</span><span>'+esc(h.location||"")+'</span></div></div><div><button class="btn primary" onclick="openCreateAuction(\''+h.id+'\')">+ Create auction</button></div></div>'+
-    '<div class="section"><div class="sectionhead"><div><div class="eyebrow">Your inventory</div><h2>Auctions</h2></div></div><div class="auctions">'+((aucs||[]).length?(aucs||[]).map(a=>'<article class="auction"><div class="auctionbody"><div class="eyebrow">'+esc(a.publication_status||"draft")+'</div><h3 style="font:700 20px Georgia;margin:5px 0">'+esc(a.title)+'</h3><div class="muted">'+new Date(a.ends_at).toLocaleString()+' · buyer premium '+Number(a.buyer_premium||0)+'%</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn sm" onclick="openCreateLot(\''+a.id+'\')">+ Add lot</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Preview</button></div></div></article>').join(""):'<div class="empty" style="grid-column:1/-1"><b>No auctions yet</b>Create your first timed auction.</div>')+'</div></div>';
+    '<div class="section"><div class="sectionhead"><div><div class="eyebrow">Your inventory</div><h2>Auctions</h2></div></div><div class="auctions">'+((aucs||[]).length?(aucs||[]).map(a=>'<article class="auction"><div class="auctionbody"><div class="eyebrow">'+esc(a.publication_status||"draft")+'</div><h3 style="font:700 20px Georgia;margin:5px 0">'+esc(a.title)+'</h3><div class="muted">'+new Date(a.ends_at).toLocaleString()+' · buyer premium '+Number(a.buyer_premium||0)+'%</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn sm" onclick="manageSellerAuction(\''+a.id+'\')">Manage</button><button class="btn sm" onclick="openCreateLot(\''+a.id+'\')">+ Add lot</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Preview</button></div></div></article>').join(""):'<div class="empty" style="grid-column:1/-1"><b>No auctions yet</b>Create your first timed auction.</div>')+'</div></div>';
 }
+
+async function manageSellerAuction(auctionId){
+  const {data:a,error:ae}=await db.from("auctions").select("*").eq("id",auctionId).single();
+  const {data:lots,error:le}=await db.from("lots").select("*").eq("auction_id",auctionId).order("lot_number");
+  if(ae||le){toast((ae||le).message);return}
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 20px 24px"><div class="eyebrow">Seller catalog</div><div class="sectionhead" style="margin-bottom:12px"><div><h2 style="font:700 28px Georgia;margin:4px 0">'+esc(a.title)+'</h2><p>'+esc(a.publication_status||"draft")+' · ends '+new Date(a.ends_at).toLocaleString()+'</p></div><button class="btn primary" onclick="publishSellerAuction(\''+a.id+'\')">Publish auction</button></div><div class="sellerLotList">'+((lots||[]).length?(lots||[]).map(l=>'<div class="sellerLotRow"><img src="'+esc((l.image_urls||[])[0]||a.cover_url||"")+'"><div><div class="eyebrow">Lot #'+l.lot_number+' · '+esc(l.catalog_status)+'</div><b>'+esc(l.title)+'</b><div class="muted">'+esc(l.qa_status)+' QA · '+(l.image_urls||[]).length+' photos · '+fmt(l.current_bid)+'</div></div><div class="sellerLotActions"><label class="btn sm">+ Photo<input type="file" accept="image/*" hidden onchange="uploadSellerLotPhoto(\''+l.id+'\',this.files,\''+a.id+'\')"></label>'+(l.qa_status==="YELLOW"&&!l.qa_seller_confirmed?'<button class="btn sm" onclick="confirmSellerLotQa(\''+l.id+'\',\''+a.id+'\')">Confirm QA</button>':'')+'<button class="btn sm" onclick="publishSellerLot(\''+l.id+'\',\''+a.id+'\')">Publish</button></div></div>').join(""):'<div class="empty"><b>No lots</b>Add a lot to this auction.</div>')+'</div><button class="btn" style="margin-top:12px" onclick="openCreateLot(\''+a.id+'\')">+ Add another lot</button></div></div>';
+}
+async function uploadSellerLotPhoto(lotId,files,auctionId){
+  if(!files?.length)return;
+  for(const file of [...files]){
+    const path=S.user.id+"/"+lotId+"/"+crypto.randomUUID()+"-"+file.name.replace(/[^a-zA-Z0-9._-]+/g,"-");
+    const {error}=await db.storage.from("lot-images").upload(path,file,{upsert:false});
+    if(error){toast(error.message);continue}
+    const {data:url}=db.storage.from("lot-images").getPublicUrl(path);
+    const {data:lot}=await db.from("lots").select("image_urls").eq("id",lotId).single();
+    const urls=[...(lot?.image_urls||[]),url.publicUrl];
+    const {error:ue}=await db.from("lots").update({image_urls:urls}).eq("id",lotId);
+    if(ue){toast(ue.message);return}
+  }
+  toast("Photo added");await loadPublic();manageSellerAuction(auctionId);
+}
+async function confirmSellerLotQa(lotId,auctionId){
+  const {error}=await db.rpc("confirm_lot_qa",{p_lot_id:lotId,p_notes:"Seller confirmed visible lot data before publication"});
+  if(error){toast(error.message);return}
+  toast("QA confirmed");await loadPublic();manageSellerAuction(auctionId);
+}
+async function publishSellerLot(lotId,auctionId){
+  const {error}=await db.rpc("publish_lot",{p_lot_id:lotId});
+  if(error){toast(error.message.replace("QA_CONFIRMATION_REQUIRED","Confirm YELLOW QA before publishing").replace("PHOTO_REQUIRED","Add at least one photo before publishing"));return}
+  toast("Lot published");await loadPublic();manageSellerAuction(auctionId);
+}
+async function publishSellerAuction(auctionId){
+  const {error}=await db.rpc("publish_auction",{p_auction_id:auctionId});
+  if(error){toast(error.message.replace("SELLER_VERIFICATION_REQUIRED","Auction house verification is required before publishing"));return}
+  toast("Auction published");closeModal();await loadPublic();renderSeller();renderAuctions();
+}
+
 async function createSellerHouse(){
   const args={
     p_name:byId("sellerName").value,
@@ -427,7 +465,7 @@ async function handleDeepLink(){
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.manageSellerAuction=manageSellerAuction;window.uploadSellerLotPhoto=uploadSellerLotPhoto;window.confirmSellerLotQa=confirmSellerLotQa;window.publishSellerLot=publishSellerLot;window.publishSellerAuction=publishSellerAuction;window.openReportLot=openReportLot;window.submitLotReport=submitLotReport;window.openSupport=openSupport;window.submitSupportTicket=submitSupportTicket;window.openPrivacyCenter=openPrivacyCenter;window.submitPrivacyRequest=submitPrivacyRequest;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth(),syncServerTime(),loadPlatformSettings()]);

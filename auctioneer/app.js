@@ -26,7 +26,7 @@ function status(s){return '<span class="status '+String(s).toLowerCase()+'">'+s+
 
 async function loadPublic(){
   const [h,a,l]=await Promise.all([
-    db.from("auction_houses_public").select("*").order("name"),
+    db.from("auction_house_public_profiles").select("*").order("name"),
     db.from("auctions").select("*").eq("public",true).order("ends_at"),
     db.from("lots").select("*").eq("status","open").order("ends_at")
   ]);

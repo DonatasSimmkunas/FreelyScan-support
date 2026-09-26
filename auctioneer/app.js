@@ -110,7 +110,7 @@ async function detectLang(){
   await syncBuyerGeo();
   await refreshRankedFeed();
 }
-function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));const target=byId(v+"View");if(target)target.classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="orders")renderOrders();if(v==="notifications")renderNotifications();if(v==="admin")renderAdmin();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
+function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));const target=byId(v+"View");if(target)target.classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="seller")renderSeller();if(v==="orders")renderOrders();if(v==="notifications")renderNotifications();if(v==="admin")renderAdmin();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
 function categories(){return ["All",...new Set(S.lots.map(x=>x.category).filter(Boolean))]}
 function renderCats(){byId("catChips").innerHTML=categories().map(c=>'<button class="chip '+(S.cat===c?'active':'')+'" onclick="S.cat=\''+esc(c).replace(/&#39;/g,"\\'")+'\';renderCats();renderMarket()">'+esc(c)+'</button>').join("")}
 function renderBrands(){const s=byId("brandSel"),cur=s.value;s.innerHTML='<option value="">All brands</option>'+[...new Set(S.lots.map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option>'+esc(b)+'</option>').join("");s.value=cur}
@@ -266,6 +266,57 @@ async function syncServerTime(){
   const t1=Date.now();
   if(data)serverOffsetMs=new Date(data).getTime()-((t0+t1)/2);
 }
+
+async function renderSeller(){
+  const box=byId("sellerConsole");if(!box)return;
+  if(!S.user){
+    box.innerHTML='<div class="empty"><b>Sign in to sell</b>Create a business or auction-house account to start onboarding.<br><button class="btn primary" style="margin-top:12px" onclick="openAuth(\'signup\')">Create account</button></div>';
+    return;
+  }
+  const {data:houses,error}=await db.from("auction_houses").select("*").eq("owner_id",S.user.id).order("created_at",{ascending:true});
+  if(error){box.innerHTML='<div class="empty"><b>Could not load seller account</b>'+esc(error.message)+'</div>';return}
+  if(!houses?.length){
+    box.innerHTML='<div class="sellerOnboard panel"><div class="eyebrow">Business onboarding</div><h2 style="font:700 28px Georgia;margin:6px 0">Create your auction house</h2><p class="muted">Business verification and payout activation are completed through the payment/KYB provider before real settlement.</p><div class="sellerForm"><input id="sellerName" class="control" placeholder="Public auction house name"><input id="sellerLegal" class="control" placeholder="Legal company name"><input id="sellerLocation" class="control" placeholder="City, country"><input id="sellerCountry" class="control" maxlength="2" placeholder="Country code, e.g. LT"><input id="sellerReg" class="control" placeholder="Company registration number"><input id="sellerVat" class="control" placeholder="VAT number (optional)"></div><button class="btn primary" style="margin-top:10px" onclick="createSellerHouse()">Start onboarding</button></div>';
+    return;
+  }
+  const h=houses[0];
+  const {data:aucs}=await db.from("auctions").select("*").eq("house_id",h.id).order("created_at",{ascending:false});
+  box.innerHTML='<div class="sellerHeader panel"><div><div class="eyebrow">Seller account</div><h2 style="font:700 28px Georgia;margin:5px 0">'+esc(h.name)+'</h2><div class="row"><span class="status '+(h.verification_status==="verified"?"green":"yellow")+'">'+esc(h.verification_status.toUpperCase())+'</span><span>'+esc(h.location||"")+'</span></div></div><div><button class="btn primary" onclick="openCreateAuction(\''+h.id+'\')">+ Create auction</button></div></div>'+
+    '<div class="section"><div class="sectionhead"><div><div class="eyebrow">Your inventory</div><h2>Auctions</h2></div></div><div class="auctions">'+((aucs||[]).length?(aucs||[]).map(a=>'<article class="auction"><div class="auctionbody"><div class="eyebrow">'+esc(a.publication_status||"draft")+'</div><h3 style="font:700 20px Georgia;margin:5px 0">'+esc(a.title)+'</h3><div class="muted">'+new Date(a.ends_at).toLocaleString()+' · buyer premium '+Number(a.buyer_premium||0)+'%</div><div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn sm" onclick="openCreateLot(\''+a.id+'\')">+ Add lot</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Preview</button></div></div></article>').join(""):'<div class="empty" style="grid-column:1/-1"><b>No auctions yet</b>Create your first timed auction.</div>')+'</div></div>';
+}
+async function createSellerHouse(){
+  const args={
+    p_name:byId("sellerName").value,
+    p_legal_name:byId("sellerLegal").value,
+    p_location:byId("sellerLocation").value,
+    p_country_code:byId("sellerCountry").value,
+    p_registration_number:byId("sellerReg").value||null,
+    p_vat_number:byId("sellerVat").value||null
+  };
+  const {error}=await db.rpc("create_auction_house",args);
+  if(error){toast(error.message);return}
+  await loadPrivate();toast("Seller onboarding started");renderSeller();
+}
+function openCreateAuction(houseId){
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">New auction</div><h2 style="font:700 28px Georgia">Create timed auction</h2><input id="newAuctionTitle" class="control" placeholder="Auction title"><input id="newAuctionEnd" class="control" style="margin-top:8px" type="datetime-local"><input id="newAuctionLocation" class="control" style="margin-top:8px" placeholder="Pickup location"><input id="newAuctionPremium" class="control" style="margin-top:8px" type="number" value="12" min="0" max="50" placeholder="Buyer premium %"><textarea id="newAuctionPickup" class="control" style="margin-top:8px;min-height:90px" placeholder="Pickup instructions"></textarea><button class="btn primary full" style="margin-top:10px" onclick="createSellerAuction(\''+houseId+'\')">Create draft auction</button></div></div>';
+}
+async function createSellerAuction(houseId){
+  const raw=byId("newAuctionEnd").value;if(!raw){toast("Choose an end time");return}
+  const {error}=await db.rpc("create_auction",{p_house_id:houseId,p_title:byId("newAuctionTitle").value,p_ends_at:new Date(raw).toISOString(),p_location:byId("newAuctionLocation").value,p_buyer_premium:Number(byId("newAuctionPremium").value||12),p_pickup_info:byId("newAuctionPickup").value||null});
+  if(error){toast(error.message);return}
+  closeModal();toast("Draft auction created");renderSeller();
+}
+function openCreateLot(auctionId){
+  byId("modal").className="modal";
+  byId("modal").innerHTML='<div class="modalbox" style="max-width:560px"><div class="modalhead"><button class="close" onclick="closeModal()">×</button></div><div style="padding:0 22px 24px"><div class="eyebrow">New lot</div><h2 style="font:700 28px Georgia">Create catalog lot</h2><input id="newLotTitle" class="control" placeholder="Lot title"><div class="frow" style="margin-top:8px"><input id="newLotBrand" class="control" placeholder="Brand"><input id="newLotModel" class="control" placeholder="Model"></div><div class="frow" style="margin-top:8px"><input id="newLotCategory" class="control" placeholder="Category"><select id="newLotCondition" class="control"><option>Good</option><option>Excellent</option><option>Used</option><option>For parts</option></select></div><input id="newLotStart" class="control" style="margin-top:8px" type="number" min="0" value="10" placeholder="Starting bid"><textarea id="newLotDescription" class="control" style="margin-top:8px;min-height:90px" placeholder="Description"></textarea><button class="btn primary full" style="margin-top:10px" onclick="createSellerLot(\''+auctionId+'\')">Create lot for review</button></div></div>';
+}
+async function createSellerLot(auctionId){
+  const {data,error}=await db.rpc("create_lot",{p_auction_id:auctionId,p_title:byId("newLotTitle").value,p_category:byId("newLotCategory").value,p_condition:byId("newLotCondition").value,p_starting_bid:Number(byId("newLotStart").value||0),p_brand:byId("newLotBrand").value||null,p_model:byId("newLotModel").value||null,p_description:byId("newLotDescription").value||null});
+  if(error){toast(error.message);return}
+  closeModal();toast("Lot created — add photos and complete QA before publishing");await loadPublic();renderSeller();
+}
+
 async function renderOrders(){
   const box=byId("ordersList");if(!box)return;
   if(!S.user){box.innerHTML='<div class="empty"><b>Sign in required</b>Your won lots and transactions will appear here.</div>';return}
@@ -326,7 +377,7 @@ async function handleDeepLink(){
 
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.renderSeller=renderSeller;window.createSellerHouse=createSellerHouse;window.openCreateAuction=openCreateAuction;window.createSellerAuction=createSellerAuction;window.openCreateLot=openCreateLot;window.createSellerLot=createSellerLot;window.renderOrders=renderOrders;window.renderNotifications=renderNotifications;window.renderAdmin=renderAdmin;window.openLegal=openLegal;window.issuePickupCode=issuePickupCode;window.openDispute=openDispute;window.submitDispute=submitDispute;window.markNotificationRead=markNotificationRead;window.confirmAuctionRegistration=confirmAuctionRegistration;window.updateFeeQuote=updateFeeQuote;window.refreshRankedFeed=refreshRankedFeed;window.setNearRadius=setNearRadius;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth(),syncServerTime()]);

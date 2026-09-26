@@ -15,12 +15,12 @@ nl:{brandSub:"gereedschap & machines",searchPh:"Zoek boren, heftrucks, compresso
 
 const S={lang:"en",houses:[],auctions:[],lots:[],ranked:null,user:null,profile:null,watch:new Set(),regs:new Set(),myBids:new Map(),cat:"All",sort:"recommended",qa:"ALL",manualLang:false,geo:{lat:null,lon:null,country:null,code:null},radius:null,sessionId:crypto.randomUUID(),impressed:new Set()};
 const tr=k=>(I18N[S.lang]&&I18N[S.lang][k])||I18N.en[k]||k;
-const byId=id=>document.getElementById(id);
+const byId=id=>document.getElementById(id);let serverOffsetMs=0;
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function fmt(v){return new Intl.NumberFormat(S.lang==="no"?"nb-NO":S.lang,{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(v)||0)}
 function house(id){return S.houses.find(x=>x.id===id)}
 function auction(id){return S.auctions.find(x=>x.id===id)}
-function hoursLeft(iso){return Math.max(0,Math.round((new Date(iso)-Date.now())/36e5))}
+function hoursLeft(iso){return Math.max(0,Math.round((new Date(iso)-(Date.now()+serverOffsetMs))/36e5))}
 function toast(t){const e=byId("toast");e.textContent=t;e.classList.remove("hidden");setTimeout(()=>e.classList.add("hidden"),1800)}
 function status(s){return '<span class="status '+String(s).toLowerCase()+'">'+s+'</span>'}
 
@@ -110,7 +110,7 @@ async function detectLang(){
   await syncBuyerGeo();
   await refreshRankedFeed();
 }
-function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));byId(v+"View").classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
+function showView(v){document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));const target=byId(v+"View");if(target)target.classList.add("active");document.querySelectorAll("[data-nav]").forEach(e=>e.classList.toggle("active",e.dataset.nav===v));if(v==="watch")renderWatch();if(v==="bids")renderBids();if(v==="orders")renderOrders();if(v==="notifications")renderNotifications();if(v==="admin")renderAdmin();if(v==="ops"){renderOps();renderOpsTable()}window.scrollTo({top:0,behavior:"smooth"})}
 function categories(){return ["All",...new Set(S.lots.map(x=>x.category).filter(Boolean))]}
 function renderCats(){byId("catChips").innerHTML=categories().map(c=>'<button class="chip '+(S.cat===c?'active':'')+'" onclick="S.cat=\''+esc(c).replace(/&#39;/g,"\\'")+'\';renderCats();renderMarket()">'+esc(c)+'</button>').join("")}
 function renderBrands(){const s=byId("brandSel"),cur=s.value;s.innerHTML='<option value="">All brands</option>'+[...new Set(S.lots.map(x=>x.brand).filter(Boolean))].sort().map(b=>'<option>'+esc(b)+'</option>').join("");s.value=cur}
@@ -145,7 +145,7 @@ function renderAuctionDetail(id){
     '<div id="auctionLots" class="auctionLotHeader"><div><div class="eyebrow">Auction catalog</div><h2>'+ls.length+' lots in this sale</h2></div><span class="muted">'+totalBids+' total bids</span></div>'+
     '<div class="grid">'+(ls.length?ls.map(itemCard).join(""):'<div class="empty" style="grid-column:1/-1"><b>No lots yet</b>This auction has no active lots.</div>')+'</div>';
 }
-function focusAuction(id){renderAuctionDetail(id);showView("auctionDetail")}
+function focusAuction(id){const u=new URL(location.href);u.searchParams.delete("lot");u.searchParams.set("auction",id);history.pushState({auction:id},"",u);renderAuctionDetail(id);showView("auctionDetail")}
 
 function trackEvent(lotId,type,distance=null,metadata={}){db.rpc("record_marketplace_event",{p_lot_id:lotId||null,p_event_type:type,p_distance_km:distance,p_session_id:S.sessionId,p_metadata:metadata}).catch(()=>{})}
 async function toggleWatch(lotId){

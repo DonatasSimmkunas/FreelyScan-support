@@ -100,7 +100,18 @@ function auctionCard(a){
   return '<article class="auction"><div class="auctioncover"><img loading="lazy" src="'+esc(a.cover_url||"")+'"><div class="auctiontxt"><small>'+esc(a.platform||a.status)+'</small><h3>'+esc(a.title)+'</h3><div>✓ '+esc(h?.name||"Auction house")+'</div></div></div><div class="auctionbody"><div class="stats"><div class="stat"><small>Lots</small><b>'+ls.length+'</b></div><div class="stat"><small>GREEN</small><b>'+ls.filter(x=>x.qa_status==="GREEN").length+'</b></div><div class="stat"><small>Bids</small><b>'+ls.reduce((s,x)=>s+x.bid_count,0)+'</b></div><div class="stat"><small>Ends</small><b>'+hoursLeft(a.ends_at)+'h</b></div></div><div class="row"><span class="status green">✓ '+tr("verified")+'</span><div style="display:flex;gap:5px"><button class="btn sm" onclick="registerAuction(\''+a.id+'\')">'+(reg?tr("registered"):tr("register"))+'</button><button class="btn sm" onclick="focusAuction(\''+a.id+'\')">Open</button></div></div></div></article>'
 }
 function renderAuctions(){byId("featuredAuctions").innerHTML=S.auctions.slice(0,3).map(auctionCard).join("");byId("allAuctions").innerHTML=S.auctions.map(auctionCard).join("")}
-function focusAuction(id){const a=auction(id);byId("globalSearch").value=a?.title||"";showView("market");renderMarket();byId("catalog").scrollIntoView({behavior:"smooth"})}
+function renderAuctionDetail(id){
+  const a=auction(id);if(!a)return;const h=house(a.house_id),ls=S.lots.filter(x=>x.auction_id===id),reg=S.regs.has(id);
+  const totalBids=ls.reduce((s,x)=>s+Number(x.bid_count||0),0),green=ls.filter(x=>x.qa_status==="GREEN").length,watching=ls.filter(x=>S.watch.has(x.id)).length,top=ls.length?Math.max(...ls.map(x=>Number(x.current_bid||0))):0;
+  byId("auctionDetail").innerHTML=
+    '<button class="backlink" onclick="showView(\'auctions\')">← Back to auctions</button>'+
+    '<div class="auctionDetailHero"><img src="'+esc(a.cover_url||"")+'"><div class="auctionDetailContent"><div class="eyebrow" style="color:#dff1e6">'+esc(a.status||"timed")+' auction · '+esc(a.platform||"")+'</div><h1>'+esc(a.title)+'</h1><p style="max-width:650px;line-height:1.6;color:#edf5ef">Professional equipment sale from a verified auction house. Review lot photos, condition notes and bidding activity before placing a bid.</p><div class="auctionMeta"><span>✓ '+esc(h?.name||"Auction house")+'</span><span>📍 '+esc(a.location||h?.location||"")+'</span><span>⏱ '+hoursLeft(a.ends_at)+'h left</span><span>Buyer premium '+Number(a.buyer_premium||0)+'%</span></div><div class="auctionActions"><button class="btn primary" style="background:#fff;color:#425c4d;border-color:#fff" onclick="registerAuction(\''+a.id+'\')">'+(reg?tr("registered"):tr("register"))+'</button><button class="btn" onclick="document.getElementById(\'auctionLots\').scrollIntoView({behavior:\'smooth\'})">Browse '+ls.length+' lots</button></div></div></div>'+
+    '<div class="auctionStats"><div class="auctionStat"><small>Lots</small><b>'+ls.length+'</b></div><div class="auctionStat"><small>Total bids</small><b>'+totalBids+'</b></div><div class="auctionStat"><small>GREEN QA</small><b>'+green+'</b></div><div class="auctionStat"><small>Watchlisted</small><b>'+watching+'</b></div><div class="auctionStat"><small>Highest current bid</small><b>'+fmt(top)+'</b></div></div>'+
+    '<div class="auctionInfoGrid"><div class="auctionInfoCard"><h3>Auction information</h3><div class="auctionInfoRows"><div><span>Auction house</span><b>'+esc(h?.name||"")+'</b></div><div><span>Location</span><b>'+esc(a.location||h?.location||"")+'</b></div><div><span>Format</span><b>'+esc(a.status||"timed")+'</b></div><div><span>Platform</span><b>'+esc(a.platform||"Auctioneer")+'</b></div></div></div><div class="auctionInfoCard"><h3>Buyer terms</h3><div class="auctionInfoRows"><div><span>Buyer premium</span><b>'+Number(a.buyer_premium||0)+'%</b></div><div><span>Pickup</span><b style="text-align:right">'+esc(a.pickup_info||"See auction terms")+'</b></div><div><span>Registration</span><b>'+(reg?"Approved":"Required")+'</b></div></div></div></div>'+
+    '<div id="auctionLots" class="auctionLotHeader"><div><div class="eyebrow">Auction catalog</div><h2>'+ls.length+' lots in this sale</h2></div><span class="muted">'+totalBids+' total bids</span></div>'+
+    '<div class="grid">'+(ls.length?ls.map(itemCard).join(""):'<div class="empty" style="grid-column:1/-1"><b>No lots yet</b>This auction has no active lots.</div>')+'</div>';
+}
+function focusAuction(id){renderAuctionDetail(id);showView("auctionDetail")}
 
 async function toggleWatch(lotId){
   if(!S.user){openAuth("signin");return}
@@ -114,7 +125,7 @@ function renderBids(){const a=S.lots.filter(x=>S.myBids.has(x.id));byId("bidsGri
 async function registerAuction(id){
   if(!S.user){openAuth("signin");return}
   const {error}=await db.from("auction_registrations").upsert({auction_id:id,user_id:S.user.id,approved:true});
-  if(error){toast(error.message);return}S.regs.add(id);toast(tr("registered"));renderAuctions()
+  if(error){toast(error.message);return}S.regs.add(id);toast(tr("registered"));renderAuctions();if(byId("auctionDetailView")?.classList.contains("active"))renderAuctionDetail(id)
 }
 async function placeBid(lotId){
   if(!S.user){openAuth("signin");return}
@@ -186,7 +197,7 @@ function renderVisuals(){
 }
 function renderAll(){renderCats();renderBrands();renderMarket();renderAuctions();renderWatch();renderBids();renderOps();renderOpsTable();renderLangMenu();renderAccount();renderVisuals();byId("watchCount").textContent=S.watch.size;byId("bidCount").textContent=S.myBids.size}
 
-window.S=S;window.showView=showView;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
+window.S=S;window.showView=showView;window.renderAuctionDetail=renderAuctionDetail;window.openItem=openItem;window.toggleWatch=toggleWatch;window.registerAuction=registerAuction;window.placeBid=placeBid;window.openAuth=openAuth;window.openAccount=openAccount;window.doSignUp=doSignUp;window.doSignIn=doSignIn;window.doLogout=doLogout;window.closeModal=closeModal;window.setLang=setLang;window.toggleLangMenu=toggleLangMenu;window.searchInput=searchInput;window.showSearchSuggestions=showSearchSuggestions;window.chooseSearch=chooseSearch;window.setDensity=setDensity;window.openFilterSheet=openFilterSheet;window.applyMobileFilters=applyMobileFilters;window.saveSearch=saveSearch;window.handleFiles=handleFiles;window.downloadAllCsv=downloadAllCsv;window.focusAuction=focusAuction;
 
 (async()=>{
   await Promise.all([loadPublic(),initAuth()]);

@@ -68,6 +68,7 @@ h1,h2,h3,h4,.brand,.panelTabs button,.toolBtn,button{font-family:var(--font-disp
 @media(max-width:980px){.mobilebar{grid-template-columns:repeat(6,1fr)!important}.exitPlannerBtn{min-height:40px}.kitGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.kitCard{min-width:0}}
 @media(max-width:760px){.kitGrid{grid-template-columns:1fr}.kitActions{grid-template-columns:1fr 1fr}.mobilebar{grid-template-columns:repeat(6,1fr)!important}.mobilebar button{font-size:8px!important;padding:7px 2px!important}}
 </style>
+<style id="planner-consent-v1">.plannerCookieBar{position:fixed;left:16px;right:16px;bottom:16px;z-index:90;max-width:860px;margin:auto;background:#08263bf7;color:#fff;border-radius:16px;padding:13px 15px;box-shadow:0 18px 60px #04172555;display:none;gap:12px;align-items:center;justify-content:space-between}.plannerCookieBar.show{display:flex}.plannerCookieBar p{margin:0;font-size:11px;line-height:1.4;color:#dceaf0}.plannerCookieBar a{color:#72e3ed}.plannerCookieBar .acts{display:flex;gap:7px}.plannerCookieBar button{border:1px solid #ffffff42;background:#fff;color:#08263b;border-radius:999px;padding:8px 11px;font-weight:800}.plannerCookieBar .ghost{background:transparent;color:#fff}@media(max-width:620px){.plannerCookieBar{bottom:76px;left:8px;right:8px;flex-direction:column;align-items:stretch}.plannerCookieBar .acts{display:grid;grid-template-columns:1fr 1fr}}</style>
 </head>
 <body>
 <div class="customerGuide">
@@ -146,7 +147,7 @@ h1,h2,h3,h4,.brand,.panelTabs button,.toolBtn,button{font-family:var(--font-disp
     <div class="row"><button onclick="closeAuth()" id="authClose">Uždaryti</button><button class="dangerBtn" onclick="signOutVent()" id="authSignOut">Atsijungti</button></div>
   </div>
 </div></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div><div class="plannerCookieBar" id="plannerCookieBar"><p id="plannerCookieText">Essential storage keeps your project and language preferences. Optional anonymous analytics help us improve the Planner. <a href="cookies.html">Details</a>.</p><div class="acts"><button class="ghost" onclick="plannerConsent('denied')">Essential only</button><button onclick="plannerConsent('granted')">Allow analytics</button></div></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -210,6 +211,8 @@ async function autoPlannerLocale(){const manual=localStorage.getItem('ventit-pla
  if(!country){const nav=(navigator.languages?.[0]||navigator.language||'en').toLowerCase();lang=nav.startsWith('lt')?'lt':nav.startsWith('no')||nav.startsWith('nb')||nav.startsWith('nn')?'no':'en'}
  state.lang=lang;translateDemoEntities(lang);document.documentElement.lang=lang;saveSilent();render();console.info('VENT planner locale',{country,lang,tz})}
 autoPlannerLocale();
+function plannerConsent(v){localStorage.setItem('ventit_analytics_consent',v);document.getElementById('plannerCookieBar')?.classList.remove('show');if(v==='granted')plannerTrack('analytics_consent',{value:'granted'})}
+function plannerShowConsent(){if(!localStorage.getItem('ventit_analytics_consent'))document.getElementById('plannerCookieBar')?.classList.add('show')}
 function plannerTrack(name,payload={}){try{const sid=localStorage.ventit_sid||(localStorage.ventit_sid=crypto.randomUUID());fetch(PLANNER_EVENT_API,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({session_id:sid,event_name:name,page:location.pathname,language:state.lang,payload}),keepalive:true}).catch(()=>{})}catch{}}
 window.addEventListener('error',e=>plannerTrack('client_error',{message:String(e.message||'error').slice(0,300),line:e.lineno||0}));
 function shareProject(){const copy=JSON.parse(JSON.stringify(state));for(const f of copy.floors||[])delete f.bg;const payload=btoa(unescape(encodeURIComponent(JSON.stringify(copy))));const url=location.origin+location.pathname+'#share='+payload;navigator.clipboard?.writeText(url).then(()=>toast(t('shareCopied'))).catch(()=>prompt('Copy project link:',url));plannerTrack('planner_export',{kind:'share'})}
@@ -301,7 +304,7 @@ function newProject(){if(!confirm(t('newConfirm')))return;pushHistory();const la
 function svgPoint(e){let svg=document.getElementById('svg'),p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
 let toastTimer;function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200)}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-render();loadStoreProducts();plannerTrack('planner_open',{rooms:state.rooms.length,floors:state.floors.length});
+render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{rooms:state.rooms.length,floors:state.floors.length});
 </script><script>(() => {
   const COPY = {
     lt: {

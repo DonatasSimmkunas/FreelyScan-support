@@ -1,0 +1,1 @@
+Contact: https://auctioneer.it.com/\nExpires: 2027-09-26T00:00:00Z\nPreferred-Languages: en, lt, no, de, pl, nl\nCanonical: https://auctioneer.it.com/.well-known/security.txt\n

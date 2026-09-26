@@ -4,8 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f8f5ef">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co; connect-src 'self' https://hvsbczirrxzzhuxlsbwe.supabase.co wss://hvsbczirrxzzhuxlsbwe.supabase.co; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
 <title>Auctioneer — Tools & Equipment Marketplace</title>
-<meta name="description" content="A customer-friendly tools and equipment auction marketplace with realtime bidding and human-reviewed catalog operations.">\n<link rel="canonical" href="https://auctioneer.it.com/">\n<meta property="og:title" content="Auctioneer — Tools & Equipment Marketplace">\n<meta property="og:description" content="Browse professional tools and equipment auctions with realtime bidding, local-first discovery and human-reviewed catalog data.">\n<meta property="og:type" content="website">\n<meta property="og:url" content="https://auctioneer.it.com/">\n<meta property="og:image" content="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1200&q=84">\n<meta name="twitter:card" content="summary_large_image">\n<link rel="manifest" href="/manifest.webmanifest">
+<meta name="description" content="A customer-friendly tools and equipment auction marketplace with realtime bidding and human-reviewed catalog operations.">
+<link rel="canonical" href="https://auctioneer.it.com/">
+<meta property="og:title" content="Auctioneer — Tools & Equipment Marketplace">
+<meta property="og:description" content="Browse professional tools and equipment auctions with realtime bidding, local-first discovery and human-reviewed catalog data.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://auctioneer.it.com/">
+<meta property="og:image" content="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1200&q=84">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="./styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -32,7 +42,9 @@
     </div>
   </div>
   <div class="catbar"><div class="cats" id="catChips"></div></div>
-</header>\n<div id="systemBanner" class="systemBanner hidden"></div>\n<div id="privacyBanner" class="privacyBanner hidden"></div>
+</header>
+<div id="systemBanner" class="systemBanner hidden"></div>
+<div id="privacyBanner" class="privacyBanner hidden"></div>
 
 <main class="shell">
   <section id="marketView" class="view active">

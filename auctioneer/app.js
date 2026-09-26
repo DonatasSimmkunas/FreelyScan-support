@@ -28,7 +28,7 @@ async function loadPublic(){
   const [h,a,l]=await Promise.all([
     db.from("auction_house_public_profiles").select("*").order("name"),
     db.from("auctions").select("*").eq("public",true).order("ends_at"),
-    db.from("lots").select("*").eq("status","open").order("ends_at")
+    db.from("lots_public_catalog").select("*").eq("status","open").order("ends_at")
   ]);
   if(h.error||a.error||l.error){console.error(h.error||a.error||l.error);return}
   S.houses=h.data||[];S.auctions=a.data||[];S.lots=l.data||[];
@@ -53,7 +53,7 @@ async function initAuth(){
 }
 function subscribeRealtime(){
   db.channel("auctioneer-live")
-    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"lots"},p=>{const i=S.lots.findIndex(x=>x.id===p.new.id);if(i>=0)S.lots[i]=p.new;else S.lots.push(p.new);renderMarket();renderBids()})
+    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"lots_public_catalog"},p=>{const i=S.lots.findIndex(x=>x.id===p.new.id);if(i>=0)S.lots[i]=p.new;else S.lots.push(p.new);renderMarket();renderBids()})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"bids"},async()=>{if(S.user)await loadPrivate();renderBids()})
     .subscribe();
 }

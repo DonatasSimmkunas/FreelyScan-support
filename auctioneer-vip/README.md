@@ -47,7 +47,7 @@ Darbdavių importui naudokite `node --env-file=.env.local scripts/import-b2b.mjs
 
 ## Integracija, išsaugant seną svetainę
 
-Į statinės svetainės `auctioneer/vip/` katalogą kopijuojami tik devyni failai iš `public/`: index.html, app.js, styles.css, atmosphere.css, music.js, favicon.svg, login-art.png, workspace-city.webp ir workspace-portrait.webp. Nei užšifruotas katalogas, nei serverio kodas, konfigūracija, slaptažodžio maiša ar duomenų raktas čia nepatenka. Nuoroda nepridedama į pagrindinį meniu ar sitemap.
+Į statinės svetainės `auctioneer/vip/` katalogą kopijuojami tik vieši failai iš `public/`: index.html, app.js, styles.css, atmosphere.css, music.js, counter.js, favicon.svg, login-art.png, workspace-city.webp ir workspace-portrait.webp. Nei užšifruotas katalogas, nei serverio kodas, konfigūracija, slaptažodžio maiša ar duomenų raktas čia nepatenka. Nuoroda nepridedama į pagrindinį meniu ar sitemap.
 
 Statinė sąsaja kreipiasi į `https://auctioneer-vip.onrender.com/vip/api/` su `credentials: omit`. Prisijungimas su `X-VIP-Client: static` grąžina atsitiktinį prieigos žetoną tik po sėkmingos serverio patikros; kiekviena duomenų užklausa jį siunčia kaip `Authorization: Bearer …`. Žetonas nesaugomas localStorage, sessionStorage, URL ar diske. Prisijungimą reikia pakartoti atnaujinus puslapį. POST užklausoms papildomai tikrinami Origin ir CSRF. Kitų svetainių kilmės ir neleistinos preflight antraštės atmetamos.
 
@@ -74,3 +74,10 @@ Neono vamzdeliai yra 24 px storio ir 65 vh aukščio (telefone 12 px ir 50 vh). 
 2026-09-27 vietinė patikra: 27 testai sėkmingi, įskaitant tikro užšifruoto abiejų rinkinių katalogo HTTP užklausas, dinamiškas teritorijas, darbdavių susiejimus ir muzikos valdymą. Patvirtinti originalių maršrutų perdavimas nepakeistam handleriui, 401 neprisijungus, 403 netinkamam Origin / CSRF, 404 privatiems failams ir sesijos panaikinimas atsijungus. Gyvo serverio patikra sėkminga: HTTPS prisijungimas, Secure / HttpOnly sesija, 4 500 įrašų, 19 laukų, Vilniaus teritorijos ir kainos rūšiavimas, CSRF, atsijungimas bei neprieinami privatūs failai. Pagrindinio puslapio HTML SHA-256 prieš ir po diegimo sutampa. Darbalaukio prisijungimo vaizdas patikrintas naršyklėje; YouTube rodo teisingą dainą ir valdiklius, bet nenutrūkstamas atkūrimas šiame naršyklės seanse nepatvirtintas. Mobili sąsaja pritaikyta, tačiau tikro mobiliojo įrenginio patikra dar neatlikta. Tikslus CORS kilmės tikrinimas, Bearer sesija, neteisingų žetonų atmetimas, sesijos pabaiga ir atsijungimas papildomai patikrinti testais. Galutinė domeno patikra atliekama paskelbus statinį `/vip` aplanką.
 
 50 tolesnių patobulinimų aprašyti `50-patobulinimu.md`.
+
+## Papildomi VIP sąsajos patobulinimai
+
+- Originali cyberpunk personažė lieka prisijungimo ekrane; jos nuotraukos miesto šviesos, lietus ir šviesos pėdsakai juda kartu su nuotrauka.
+- Aktyvių filtrų žymos leidžia pašalinti atskirą filtrą vienu paspaudimu. Paieškos tekstą galima išvalyti atskirai. Telefone yra grįžimo į rezultatų viršų veiksmas.
+- Prisijungimo skaitiklis aiškiai pažymėtas kaip demonstracinis. Atskaitos taškas 6 004 pagrindiniai importuoti įrašai, mažas logaritminis prieaugis nesaugomas ir nekeičia duomenų bazės ar paieškos kiekių.
+- Dekoratyvinės kaukolės ir humoristinis užrašas neteigia apie tikrą neteisėtą veiklą.

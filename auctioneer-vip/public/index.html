@@ -9,9 +9,10 @@
   <meta name="theme-color" content="#080b0c">
   <title>Auctioneer · VIP</title>
   <link rel="icon" href="/vip/favicon.svg?v=2" type="image/svg+xml">
-  <link rel="stylesheet" href="/vip/styles.css?v=3">
-  <link rel="stylesheet" href="/vip/atmosphere.css?v=4">
-  <script type="module" src="/vip/app.js?v=2"></script>
+  <link rel="stylesheet" href="/vip/styles.css?v=4">
+  <link rel="stylesheet" href="/vip/atmosphere.css?v=5">
+  <script type="module" src="/vip/app.js?v=6"></script>
+  <script type="module" src="/vip/counter.js?v=1"></script>
 </head>
 <body class="login-mode">
   <div id="ambientBackground" aria-hidden="true">
@@ -36,6 +37,7 @@
   <main id="loginView" class="login-layout">
     <section class="login-art" aria-label="Cyberpunk personažė neoniniame mieste">
       <img src="/vip/login-art.png?v=2" alt="Suaugusi cyberpunk personažė juodu paltu neoninio miesto fone" fetchpriority="high" width="1024" height="1536">
+      <div class="portrait-atmosphere" aria-hidden="true"><i class="portrait-glow glow-lime"></i><i class="portrait-glow glow-violet"></i><i class="portrait-rain"></i><i class="portrait-trace"></i></div>
       <div class="art-shade"></div><div class="scanline" aria-hidden="true"></div>
       <div class="art-top mono"><span>AUCTIONEER / VIP</span><span class="outline-label">PRIVATI PRIEIGA</span></div>
       <div class="art-caption"><p class="eyebrow">KONTAKTAI. PASLAUGOS. ĮKAINIAI.</p><div class="art-title">Tavo ryšiai.<br><span>Tavo erdvė.</span></div><div class="neon-rule" aria-hidden="true"></div></div>
@@ -43,9 +45,11 @@
     </section>
     <section class="login-panel">
       <div class="login-form-wrap">
+        <p class="login-joke"><span class="login-skull" aria-hidden="true">☠</span><span>Kontaktai čia randami<br><strong>nelegaliai greitai.</strong></span><span class="login-skull" aria-hidden="true">☠</span></p>
         <div class="terminal-kicker mono"><span class="cursor" aria-hidden="true">▌</span> AUTORIZACIJA</div>
         <h1>Privati<br><span>prieiga.</span></h1>
         <p class="login-intro">Prisijunkite prie paslaugų teikėjų ir darbdavių kontaktų paieškos.</p>
+        <div class="login-counter" aria-live="off"><div><span class="login-counter-label">Bazės duomenų skaičius</span><small>Reali bazė: 6 004 įrašai</small><small>Demonstracinis augimas</small></div><strong id="demoDatabaseCount">6 004</strong></div>
         <form id="loginForm">
           <label for="username">Vartotojo vardas</label>
           <input id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" enterkeyhint="next" spellcheck="false" required maxlength="100" placeholder="Vartotojo vardas">
@@ -79,7 +83,8 @@
       <div><span id="statFourthLabel" class="stat-label">Su nurodyta kaina</span><strong id="statPriced">—</strong></div>
     </section>
     <form id="searchForm" class="search-shell">
-      <div class="search-bar"><span aria-hidden="true" class="search-symbol">⌕</span><label class="sr-only" for="q">Ieškoti visuose laukuose</label><input id="q" name="q" type="search" enterkeyhint="search" maxlength="300" placeholder="Vardas, įmonė, telefonas, paslauga arba bet kuri kita informacija…" autocomplete="off"><button class="primary" type="submit">Ieškoti <span aria-hidden="true">↗</span></button></div>
+      <div class="search-bar"><span aria-hidden="true" class="search-symbol">⌕</span><label class="sr-only" for="q">Ieškoti visuose laukuose</label><input id="q" name="q" type="search" enterkeyhint="search" maxlength="300" placeholder="Vardas, įmonė, telefonas, paslauga arba bet kuri kita informacija…" autocomplete="off"><button id="clearSearch" class="clear-search" type="button" aria-label="Išvalyti paieškos tekstą" title="Išvalyti paieškos tekstą" hidden>×</button><button class="primary" type="submit">Ieškoti <span aria-hidden="true">↗</span></button></div>
+      <div id="activeFilterChips" class="filter-chips" role="group" aria-label="Aktyvūs filtrai. Paspauskite filtrą, kad jį pašalintumėte." hidden></div>
       <div class="search-layout">
         <details id="filterPanel" class="filter-panel" open>
           <summary class="filter-summary"><span>Filtrai <span id="activeFilterCount" class="badge">0</span></span><span class="filter-chevron" aria-hidden="true">⌄</span></summary>
@@ -101,6 +106,7 @@
           <div id="emptyState" class="empty-state" hidden><span class="empty-symbol" aria-hidden="true">⌕</span><h2>Rezultatų nerasta</h2><p>Pabandykite platesnę teritoriją arba mažiau filtrų.</p><button id="emptyReset" class="subtle" type="button">Išvalyti filtrus</button></div>
           <div id="resultsTable" class="table-wrap"><table><thead><tr id="resultsHead"><th>Paslaugos teikėjas</th><th>Teritorija</th><th>Telefonas</th><th class="price-col">Įkainis</th><th>Įvertinimas</th><th><span class="sr-only">Veiksmai</span></th></tr></thead><tbody id="resultsBody"></tbody></table></div>
           <footer class="pagination"><div class="page-size"><label for="pageSize">Rodyti</label><select id="pageSize" name="pageSize"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></div><span id="pageInfo" class="mono">—</span><div><button id="previousPage" class="subtle" type="button" aria-label="Ankstesnis puslapis">←</button><button id="nextPage" class="subtle" type="button" aria-label="Kitas puslapis">→</button></div></footer>
+          <button id="backToResults" class="subtle back-to-results" type="button">Į rezultatų viršų <span aria-hidden="true">↑</span></button>
         </section>
       </div>
     </form>

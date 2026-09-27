@@ -13,6 +13,7 @@ const PUBLIC_FILES={
   '/vip/styles.css':['styles.css','text/css; charset=utf-8'],
   '/vip/atmosphere.css':['atmosphere.css','text/css; charset=utf-8'],
   '/vip/music.js':['music.js','text/javascript; charset=utf-8'],
+  '/vip/counter.js':['counter.js','text/javascript; charset=utf-8'],
   '/vip/login-art.png':['login-art.png','image/png'],
   '/vip/workspace-city.webp':['workspace-city.webp','image/webp'],
   '/vip/workspace-portrait.webp':['workspace-portrait.webp','image/webp'],

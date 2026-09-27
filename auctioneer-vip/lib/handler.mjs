@@ -8,6 +8,7 @@ import {createEmployerCatalog} from './employers.mjs';
 import {createAuth} from './auth.mjs';
 import {createCrawlerClient} from './crawler-client.mjs';
 import {createLiveEmployerCatalog} from './live-employers.mjs';
+import {publicAssets} from './public-assets.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PUBLIC_FILES={
   '/vip/':['index.html','text/html; charset=utf-8'],
@@ -38,6 +39,7 @@ const PUBLIC_FILES={
   '/vip/workspace-portrait.webp':['workspace-portrait.webp','image/webp'],
   '/vip/favicon.svg':['favicon.svg','image/svg+xml']
 };
+for(const name of publicAssets)PUBLIC_FILES['/vip/'+name]=[name,name.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8'];
 const HEADERS={
   'Cache-Control':'no-store, private','Pragma':'no-cache','X-Robots-Tag':'noindex, nofollow, noarchive',
   'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer',

@@ -86,3 +86,7 @@ Sesijos ir bandymų ribojimas laikomi vieno serverio atmintyje: perkrovimas pana
 2026-09-28 gyvos API patikros rezultatas: 11 350 bendrų įrašų, 5 667 kontaktų įrašai, 5 217 paslaugų teikėjų, 1 512 darbdavių ir 4 621 darbo skelbimas. Patvirtinta crawlerio įmonių paieška bei detalės, 401 neprisijungus, 403 klaidingam CSRF ir sesijos panaikinimas atsijungus. Patikrinti paskelbti statiniai failai ir nepakitęs pagrindinio puslapio HTML SHA-256. Viešas prisijungimo ekranas ir frazių valdikliai patikrinti naršyklėje. Tikro mobiliojo įrenginio ir visų vidinių vizualų naršyklės patikra neatlikta. YouTube šiai testavimo naršyklei pateikė robotų patikrą, todėl garso atkūrimas nepatvirtintas.
 
 50 papildomų idėjų pateikta `50-patobulinimu.md`.
+
+## Viešų failų versijos
+
+Po `public/` JavaScript ar CSS pakeitimų paleisti `node scripts/build-public-assets.mjs` prieš publikavimą. Jis sukuria turinio maiša pažymėtus failus, atnaujina HTML nuorodas, crawlerio priklausomybę nuo app modulio ir serverio leidžiamų failų sąrašą. Šie generuoti vieši failai įrašomi į abi Git šakas. Atskiros failų versijos neleidžia naršyklei sujungti seno skripto su nauju HTML.

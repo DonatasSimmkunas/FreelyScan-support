@@ -1,0 +1,20 @@
+/* One compact phrase stays in the shared header before and after sign-in. */
+.vip-motto{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;min-width:0;margin:0;padding:0 0 0 14px;font-family:var(--font-body,'Manrope',sans-serif)}
+.vip-motto::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:2px;background:linear-gradient(var(--lime,#c1ff4a),#b798ef);opacity:.7;pointer-events:none}
+.motto-header{display:contents}.motto-heading{display:none}
+.motto-controls{grid-column:2;grid-row:1;display:flex;align-items:center;gap:2px;flex-shrink:0}
+.motto-button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:5px;color:#a9c49a;background:transparent;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.motto-button:hover{color:#ddf6cd;background:#223021;border-color:#405339}
+.motto-button:focus-visible{outline:2px solid var(--lime,#c1ff4a);outline-offset:2px}
+.motto-button:disabled{opacity:.35;cursor:default}
+.motto-button:disabled:hover{background:transparent;border-color:transparent;color:#a9c49a}
+.motto-pause{color:#baa3d8}
+.motto-pause[aria-pressed=true]:not(:disabled){color:var(--lime,#c1ff4a);background:#1b2919;border-color:#3a5131}
+.motto-icon{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.motto-copy{grid-column:1;grid-row:1;min-width:0;margin:0;opacity:1;transform:translateY(0);transition:opacity .16s ease,transform .16s ease}
+.motto-changing .motto-copy{opacity:0;transform:translateY(3px)}
+.motto-latin{margin:0;color:#e5efdd;font-family:var(--font-display,'Space Grotesk',sans-serif);font-size:.9375rem;font-weight:500;letter-spacing:-.015em;line-height:1.4;text-wrap:pretty;overflow-wrap:anywhere}
+.motto-translation{margin:3px 0 0;color:#96ac92;font-size:.6875rem;line-height:1.45;text-wrap:pretty;overflow-wrap:anywhere}
+body.effects-off .motto-copy,body.effects-off .motto-button{transition:none}
+@media(max-width:650px){.vip-motto{gap:6px;padding-left:11px}.motto-controls{gap:0}.motto-latin{font-size:.875rem}.motto-translation{font-size:.6875rem}}
+@media(prefers-reduced-motion:reduce){.motto-copy,.motto-button{transition:none}}

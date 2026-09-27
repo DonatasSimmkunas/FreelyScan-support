@@ -194,3 +194,68 @@ body.effects-off #ambientBackground .photo-portrait{opacity:0;transform:none;ani
   #ambientBackground .photo-city{opacity:1;transform:none;animation:none!important}
   #ambientBackground .photo-portrait{opacity:0;transform:none;animation:none!important}
 }
+
+/* The original portrait and its city lights move together; her face stays clear. */
+.login-art{--portrait-x:50%;--portrait-y:35%;isolation:isolate}
+.login-art>img,.portrait-atmosphere{
+  transform-origin:var(--portrait-x) var(--portrait-y);
+  animation:portrait-city-drift 30s ease-in-out infinite alternate;
+}
+.portrait-atmosphere{
+  position:absolute;inset:0;overflow:hidden;pointer-events:none;
+  container-type:size;mix-blend-mode:screen;
+}
+.portrait-atmosphere i{position:absolute;display:block;pointer-events:none}
+.portrait-glow{
+  left:var(--portrait-x);top:var(--portrait-y);
+  width:max(100cqw,66.6667cqh);aspect-ratio:1024/1536;
+  transform:translate(calc(0% - var(--portrait-x)),calc(0% - var(--portrait-y)));
+  opacity:0;animation:portrait-lights 13s ease-in-out -3s infinite;
+}
+.portrait-glow.glow-lime{
+  background:
+    radial-gradient(ellipse .75% 27% at 60% 43%,#caff74b3 0,#baff4f85 30%,transparent 75%),
+    radial-gradient(ellipse .65% 26% at 80% 34%,#daffa8c2 0,#bcff4d94 25%,transparent 75%),
+    radial-gradient(ellipse .85% 34% at 94% 44%,#ccff85c2 0,#b7ff4c85 30%,transparent 75%),
+    radial-gradient(ellipse 4% 3% at 72% 64%,#baff4d70,transparent 75%),
+    radial-gradient(ellipse 5% 2% at 89% 73%,#caff7c70,transparent 75%);
+}
+.portrait-glow.glow-violet{
+  background:
+    radial-gradient(ellipse .9% 28% at 60% 43%,#d7afffc2 0,#b17aff99 30%,transparent 75%),
+    radial-gradient(ellipse .8% 27% at 80% 34%,#c9a0ffc2 0,#ab72ff99 25%,transparent 75%),
+    radial-gradient(ellipse 1% 35% at 94% 44%,#d3afffc2 0,#b87fff99 30%,transparent 75%),
+    radial-gradient(ellipse 4% 3% at 72% 64%,#b47aff7d,transparent 75%),
+    radial-gradient(ellipse 5% 2% at 89% 73%,#cb9aff7d,transparent 75%);
+  animation-duration:19s;animation-delay:-11s;
+}
+.portrait-rain{
+  inset:-160px -30px;opacity:.25;
+  background:linear-gradient(106deg,transparent 46%,#d9eeff6b 49%,transparent 51%) 0 0/114px 160px;
+  -webkit-mask-image:linear-gradient(90deg,transparent 48%,#000 70%);
+  mask-image:linear-gradient(90deg,transparent 48%,#000 70%);
+  animation:portrait-rain-drift 14s linear infinite;
+}
+.portrait-trace{
+  right:15%;top:5%;width:3px;height:36%;opacity:0;
+  background:linear-gradient(transparent,#d8ffb1b3,transparent);
+  animation:portrait-light-trace 18s ease-in-out -4s infinite;
+}
+@keyframes portrait-city-drift{
+  from{transform:translate3d(-.4%,0,0) scale(1.025)}
+  to{transform:translate3d(.4%,-.4%,0) scale(1.055)}
+}
+@keyframes portrait-lights{0%,100%{opacity:0}50%{opacity:.8}}
+@keyframes portrait-rain-drift{from{transform:translate3d(0,-160px,0)}to{transform:translate3d(0,0,0)}}
+@keyframes portrait-light-trace{0%{transform:translate3d(0,0,0);opacity:0}35%,60%{opacity:.75}100%{transform:translate3d(0,240px,0);opacity:0}}
+@media(max-width:650px){
+  .login-art{--portrait-y:18%}
+  .portrait-rain{opacity:.2}
+  .portrait-trace{width:2px}
+}
+body.effects-off .portrait-atmosphere{display:none}
+body.effects-off .login-art>img{transform:none;animation:none!important}
+@media(prefers-reduced-motion:reduce){
+  .portrait-atmosphere{display:none}
+  .login-art>img{transform:none;animation:none!important}
+}

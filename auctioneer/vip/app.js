@@ -25,6 +25,31 @@ function activeFilters(){
   const values=employers()?['category','city','employerType','contactStatus','portal']:['category','city','coverage','unit','minPrice','maxPrice'];
   const checks=employers()?['withPhone','withEmail']:['includeNationwide','withPhone','withEmail','withPrice'];
   $('activeFilterCount').textContent=String(values.filter(id=>$(id).value!=='').length+checks.filter(id=>$(id).checked).length);
+  renderFilterChips(values,checks);
+}
+function renderFilterChips(values,checks){
+  const container=$('activeFilterChips');container.replaceChildren();$('clearSearch').hidden=$('q').value==='';
+  const labels={q:'Paieška',category:'Veiklos sritis',city:'Teritorija',coverage:'Aptarnavimo zona',unit:'Kainos vienetas',minPrice:'Kaina nuo',maxPrice:'Kaina iki',employerType:'Darbdavio tipas',contactStatus:'Kontaktų būsena',portal:'Portalas',includeNationwide:'Dirba ir visoje Lietuvoje',withPhone:'Tik su telefonu',withEmail:'Tik su el. paštu',withPrice:'Tik su skaitine kaina'};
+  const addChip=(label,remove)=>{
+    const button=document.createElement('button');button.type='button';button.className='filter-chip';button.title=label;button.setAttribute('aria-label','Pašalinti filtrą: '+label);
+    const text=document.createElement('span');text.className='filter-chip-text';text.textContent=label;
+    const icon=document.createElement('span');icon.textContent='×';icon.setAttribute('aria-hidden','true');button.append(text,icon);
+    button.addEventListener('click',()=>{
+      if(!csrf||!metadata)return;
+      remove();updateTerritory();activeFilters();search(1);
+      (container.querySelector('button')||$('resultsToolbar')).focus({preventScroll:true});
+    });container.append(button);
+  };
+  if($('q').value.trim())addChip(labels.q+': '+$('q').value.trim(),()=>{$('q').value='';});
+  for(const id of values){const field=$(id);if(field.value==='')continue;const value=field.tagName==='SELECT'?field.selectedOptions[0]?.textContent||field.value:field.value;addChip(labels[id]+': '+value,()=>{field.value='';});}
+  for(const id of checks)if($(id).checked)addChip(labels[id],()=>{$(id).checked=false;});
+  for(const row of $('rules').children){
+    const field=metadata?.fields.find(f=>f.key===row.querySelector('.rule-field').value),op=row.querySelector('.rule-op').value,value=row.querySelector('.rule-value').value.trim();
+    if(!field||(!['missing','present'].includes(op)&&!value))continue;
+    const condition=operators.find(([key])=>key===op)?.[1]||op,mode=$('ruleMode').value==='any'?'ARBA':'IR';
+    addChip(`${mode} · ${field.label}: ${condition.toLocaleLowerCase('lt')}${['missing','present'].includes(op)?'':' '+value}`,()=>row.remove());
+  }
+  container.hidden=!container.children.length;
 }
 function revealResults(){if(!mobileLayout.matches)return;$('filterPanel').open=false;document.activeElement?.blur();$('resultsToolbar').scrollIntoView({block:'start',behavior:'instant'});$('resultsToolbar').focus({preventScroll:true});}
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
@@ -32,9 +57,10 @@ function invalidateDetail(){detailSerial++;pendingDetail?.abort();pendingDetail=
 function clearSensitiveView(message=''){
   accessToken='';csrf='';sessionVersion++;rows=[];metadata=null;nicheSerial++;requestSerial++;pendingMetadata?.abort();pendingRequest?.abort();invalidateDetail();clearTimeout(debounceId);$('resultsBody').replaceChildren();$('detailContent').replaceChildren();
   if($('detailDialog').open)$('detailDialog').close();
+  $('activeFilterChips').replaceChildren();$('activeFilterChips').hidden=true;$('clearSearch').hidden=true;
   $('appView').hidden=true;$('loginView').hidden=false;$('logout').hidden=true;document.body.classList.add('login-mode');$('routeState').textContent='PRIEIGA';$('loginError').textContent=message;$('password').value='';
 }
-async function api(endpoint,options={}){
+export async function api(endpoint,options={}){
   const {payload,signal}=options,version=sessionVersion;
   const headers=payload===undefined?{}:{'Content-Type':'application/json','X-VIP-CSRF':csrf};
   if(staticClient)headers['X-VIP-Client']='static';
@@ -64,7 +90,7 @@ async function switchNiche(next){
   $('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';$('resultsBody').replaceChildren();$('resultCount').textContent='—';$('mobileResultCount').textContent='—';$('pageInfo').textContent='';$('previousPage').disabled=true;$('nextPage').disabled=true;
   $('emptyState').hidden=true;$('unitNotice').hidden=true;$('searchError').hidden=true;$('resultsTable').hidden=false;$('searchForm').inert=true;$('searchForm').setAttribute('aria-busy','true');$('loading').hidden=false;
   for(const id of ['statRecords','statCategories','statCities','statPriced','sourceCount'])$(id).textContent='—';
-  renderNiche();syncFilterLayout();pendingMetadata=new AbortController();
+  renderNiche();syncFilterLayout();activeFilters();pendingMetadata=new AbortController();
   try{
     const data=await api('metadata?niche='+encodeURIComponent(next),{signal:pendingMetadata.signal});
     if(serial!==nicheSerial)return;
@@ -168,7 +194,9 @@ function scheduleSearch(){
   debounceId=setTimeout(()=>search(1),300);
 }
 $('searchForm').addEventListener('submit',async event=>{event.preventDefault();await search(1);revealResults();});$('showResults').addEventListener('click',async()=>{await search(1);revealResults();});
-$('searchForm').addEventListener('input',event=>{if(event.target.tagName==='INPUT')scheduleSearch();});
+$('searchForm').addEventListener('input',event=>{if(event.target.tagName==='INPUT'){activeFilters();scheduleSearch();}});
+$('clearSearch').addEventListener('click',()=>{if(!metadata)return;$('q').value='';activeFilters();search(1);$('q').focus({preventScroll:true});});
+$('backToResults').addEventListener('click',revealResults);
 $('searchForm').addEventListener('change',event=>{if(event.target.id==='city')updateTerritory();if(event.target.matches('.rule-field,.rule-op'))configureRule(event.target.closest('.rule-row'),event.target.classList.contains('rule-field'));search(1);});
 $('previousPage').addEventListener('click',async()=>{await search(page-1);revealResults();});$('nextPage').addEventListener('click',async()=>{await search(page+1);revealResults();});
 function reset(){if(!metadata)return;$('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';updateTerritory();search(1);}

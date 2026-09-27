@@ -10,18 +10,16 @@ body{isolation:isolate}
   background:radial-gradient(ellipse at 100% 12%,#845ac71a,transparent 48%),radial-gradient(ellipse at 4% 88%,#81b93615,transparent 48%);
 }
 #ambientBackground i,#ambientBackground::before,#ambientBackground::after{position:absolute;display:block;pointer-events:none}
-#ambientBackground .ambient-photo,#ambientBackground .ambient-scrim{display:none}
-body:not(.login-mode) #ambientBackground .ambient-photo,
-body:not(.login-mode) #ambientBackground .ambient-scrim{display:block}
+#ambientBackground .ambient-photo,#ambientBackground .ambient-scrim{display:block}
 .ambient-photo{inset:-3%;z-index:0;background-size:cover;background-repeat:no-repeat;isolation:isolate}
-body:not(.login-mode) .photo-city{
+.photo-city{
   --photo-x:50%;--photo-y:45%;
   background-image:url('/vip/workspace-city.webp');
   background-position:var(--photo-x) var(--photo-y);
   opacity:1;
   animation:ambient-city-drift 40s ease-in-out infinite alternate;
 }
-body:not(.login-mode) .photo-portrait{
+.photo-portrait{
   --photo-x:65%;--photo-y:50%;
   background-image:url('/vip/workspace-portrait.webp');
   background-position:var(--photo-x) var(--photo-y);
@@ -137,12 +135,13 @@ body:not(.login-mode) .photo-portrait{
   animation:ambient-sweep 26s ease-in-out infinite;
 }
 /* Oversized tubes breathe all the way off and on; there are no abrupt brightness steps. */
-.edge-light{top:14%;width:24px;height:65vh;max-height:none;border-radius:999px;opacity:0;z-index:2;animation:ambient-lamp 12s ease-in-out -2s infinite}
+.edge-light{top:14%;width:24px;height:65vh;max-height:none;border-radius:999px;opacity:0;z-index:-1;animation:ambient-lamp 12s ease-in-out -2s infinite}
 .edge-light.left{left:0;background:linear-gradient(90deg,#658926,#bdff55 22%,#f6ffdc 48%,#c1ff4a 73%,#6c9829);box-shadow:0 0 18px #c1ff4ab3,0 0 48px #a6e74670,0 0 85px #95d13638}
 .edge-light.right{right:0;top:22%;background:linear-gradient(90deg,#604681,#bf98f5 22%,#f3eaff 48%,#c5a0ff 73%,#8060aa);box-shadow:0 0 18px #c5a0ffb3,0 0 48px #a175df70,0 0 85px #9260ca38;animation-duration:15s;animation-delay:-8s}
 .edge-light::after{content:"";position:absolute;top:calc(100% + 22px);left:0;width:100%;height:52px;border-radius:inherit;background:inherit;box-shadow:inherit}
-/* Keep the large lights behind search controls and result text after login. */
-body:not(.login-mode) .edge-light{z-index:-1}
+.login-mode .login-panel{background:linear-gradient(135deg,#090c0de6,#090c0dc7);text-shadow:0 1px 5px #000}
+.login-mode .art-shade{background:linear-gradient(180deg,#05080720 0%,transparent 32%,#050807b8 100%)}
+.login-mode .art-top,.login-mode .art-caption,.login-mode .art-bottom{text-shadow:0 2px 10px #000}
 .neon-rule{animation:ambient-lamp 12s ease-in-out -2s infinite}
 body:not(.login-mode) #appView :is(.workspace-head,.results-toolbar,.pagination,.workspace-footer){text-shadow:0 1px 5px #000,0 0 14px #000b}
 #appView #searchForm[aria-busy=true]{opacity:1}
@@ -169,8 +168,8 @@ body:not(.login-mode) #appView :is(.workspace-head,.results-toolbar,.pagination,
 @keyframes ambient-building-glow{0%,100%{opacity:0}50%{opacity:.78}}
 @media(max-width:900px) and (min-width:651px){.edge-light{width:18px}}
 @media(max-width:650px){
-  body:not(.login-mode) .photo-city{--photo-x:52%;--photo-y:50%}
-  body:not(.login-mode) .photo-portrait{--photo-x:82%;--photo-y:50%}
+  .photo-city{--photo-x:52%;--photo-y:50%}
+  .photo-portrait{--photo-x:82%;--photo-y:50%}
   .ambient-scrim{background:linear-gradient(180deg,#05090b66,#07100e8c 60%,#05090bb3)}
   .ambient-grid{opacity:.6}
   .ambient-orbit{width:280px;height:280px}
@@ -183,17 +182,15 @@ body:not(.login-mode) #appView :is(.workspace-head,.results-toolbar,.pagination,
   .edge-light.left{top:22%}.edge-light.right{top:32%}
   .edge-light::after{height:34px;top:calc(100% + 16px)}
 }
-/* Motion preferences retain the authenticated still photograph and its reading scrim. */
+/* Motion preferences retain the still photograph and its reading scrim on both screens. */
 body.effects-off #ambientBackground .ambient-motion,
 body.effects-off #ambientBackground .ambient-photo::before,body.effects-off #ambientBackground .ambient-photo::after,
 body.effects-off #ambientBackground::before,body.effects-off #ambientBackground::after,
 body.effects-off .edge-light{display:none}
 body.effects-off #ambientBackground .photo-city{opacity:1;transform:none;animation:none!important}
 body.effects-off #ambientBackground .photo-portrait{opacity:0;transform:none;animation:none!important}
-body.login-mode.effects-off #ambientBackground{display:none}
 @media(prefers-reduced-motion:reduce){
   #ambientBackground .ambient-motion,#ambientBackground .ambient-photo::before,#ambientBackground .ambient-photo::after,#ambientBackground::before,#ambientBackground::after,.edge-light{display:none}
   #ambientBackground .photo-city{opacity:1;transform:none;animation:none!important}
   #ambientBackground .photo-portrait{opacity:0;transform:none;animation:none!important}
-  body.login-mode #ambientBackground{display:none}
 }

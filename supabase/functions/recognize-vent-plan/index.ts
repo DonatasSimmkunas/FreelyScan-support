@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const origins = new Set(["https://vent.it.com", "https://www.vent.it.com", "https://vent-it-com.onrender.com"]);
-const types = ["living", "bedroom", "office", "kitchen", "bathroom", "wc", "utility", "hall", "vestibule", "technical", "other"];
+const types = ["living", "livingKitchen", "bedroom", "office", "kitchen", "bathroom", "wc", "utility", "hall", "vestibule", "technical", "other"];
 const reply = (body: unknown, status: number, headers: HeadersInit) =>
   new Response(JSON.stringify(body), { status, headers });
 
@@ -45,7 +45,7 @@ Deno.serve(async request => {
           store: false,
           max_output_tokens: 2500,
           input: [{ role: "user", content: [
-            { type: "input_text", text: `Analyze this residential floor plan, which is exactly 1000 x 700 pixels. Return visible room rectangles in pixel coordinates (x,y,w,h), room labels and room types. Allowed types: ${types.join(", ")}. Include an HRV unit position only if a clear technical/service location is visible; otherwise use (900,90). Do not invent rooms that cannot be seen. If boundaries are unclear, omit the room and note uncertainty. Treat this as a draft; do not calculate engineering airflow or infer real-world scale.` },
+            { type: "input_text", text: `Analyze this residential floor plan, which is exactly 1000 x 700 pixels. Return visible room rectangles in pixel coordinates (x,y,w,h), room labels and room types. Allowed types: ${types.join(", ")}. Use livingKitchen for a clearly labeled combined living room and kitchen without a separating wall; keep it one room. Do not invent a kitchen area or a wall when neither is visible. Include an HRV unit position only if a clear technical/service location is visible; otherwise use (900,90). Do not invent rooms that cannot be seen. If boundaries are unclear, omit the room and note uncertainty. Treat this as a draft; do not calculate engineering airflow, terminal counts, duct paths or real-world scale.` },
             { type: "input_image", image_url: image, detail: "high" },
           ] }],
           text: { format: { type: "json_schema", name: "floor_plan_draft", strict: true, schema: {

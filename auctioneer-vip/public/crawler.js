@@ -1,4 +1,4 @@
-import {api} from './app.js?v=7';
+import {api} from './app.js?v=8';
 
 const appView=document.getElementById('appView');
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -135,7 +135,8 @@ const sourceName=id=>state?.status?.sources?.find(source=>source.id===id)?.name|
 function mountFeed(){
   feed=document.createElement('section');feed.id='crawlerLiveFeed';feed.className='crawler-live-feed';feed.setAttribute('aria-labelledby','crawlerFeedTitle');
   feed.innerHTML=`<div class="crawler-feed-head"><div><span class="crawler-feed-eyebrow"><i aria-hidden="true"></i> Tiesiai iš šaltinių</span><h2 id="crawlerFeedTitle">Gyvas atradimų srautas</h2><p id="crawlerFeedState">Jungiamasi prie rinkimo sistemos…</p></div><div class="crawler-feed-switch" role="group" aria-label="Srauto įrašų tipas"><button type="button" data-feed-kind="all" aria-pressed="true">Visi</button><button type="button" data-feed-kind="company" aria-pressed="false">Įmonės</button><button type="button" data-feed-kind="job" aria-pressed="false">Darbai</button></div></div><ol id="crawlerFeedEntries" class="crawler-feed-entries" aria-live="off"></ol><p id="crawlerFeedEmpty" class="crawler-feed-empty">Laukiama išsaugotų radinių…</p><p class="crawler-feed-note">Tik duomenų bazėje išsaugoti radiniai. „Aptikta“ – pirmojo surinkimo laikas.</p>`;
-  panel.before(feed);
+  const footer=appView.querySelector('.workspace-footer');
+  if(footer)footer.before(feed);else appView.append(feed);
   feed.addEventListener('click',event=>{
     const filter=event.target.closest('[data-feed-kind]');
     if(filter&&feed.contains(filter)){state.feedKind=filter.dataset.feedKind;renderFeed(true);return;}

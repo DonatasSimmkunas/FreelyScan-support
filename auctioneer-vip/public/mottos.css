@@ -1,11 +1,8 @@
-/* Shared phrases retain one position across login and workspace views. */
-.vip-motto{position:relative;min-width:0;margin:0 0 24px;padding:13px 15px 15px;border:1px solid #3c4b39;border-radius:8px;background:linear-gradient(130deg,#142019ed,#101716f5);box-shadow:inset 0 1px #daffc90a;overflow:hidden;font-family:var(--font-body,'Manrope',sans-serif)}
-.vip-motto::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:2px;border-radius:2px;background:linear-gradient(var(--lime,#c1ff4a),#b798ef);opacity:.7;pointer-events:none}
-.motto-header{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
-.motto-heading{display:flex;flex-direction:column;gap:5px;min-width:0}
-.motto-kicker{color:#b7c9a9;font-size:.5625rem;font-weight:600;line-height:1.45;letter-spacing:.115em;text-transform:uppercase}
-.motto-position{color:#7f9780;font-size:.625rem;line-height:1.4;font-variant-numeric:tabular-nums;white-space:nowrap}
-.motto-controls{display:flex;align-items:center;gap:2px;flex-shrink:0}
+/* One compact phrase stays in the shared header before and after sign-in. */
+.vip-motto{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:16px;min-width:0;margin:0;padding:0 0 0 14px;font-family:var(--font-body,'Manrope',sans-serif)}
+.vip-motto::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;border-radius:2px;background:linear-gradient(var(--lime,#c1ff4a),#b798ef);opacity:.7;pointer-events:none}
+.motto-header{display:contents}.motto-heading{display:none}
+.motto-controls{grid-column:2;grid-row:1;display:flex;align-items:center;gap:2px;flex-shrink:0}
 .motto-button{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:1px solid transparent;border-radius:5px;color:#a9c49a;background:transparent;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
 .motto-button:hover{color:#ddf6cd;background:#223021;border-color:#405339}
 .motto-button:focus-visible{outline:2px solid var(--lime,#c1ff4a);outline-offset:2px}
@@ -14,26 +11,10 @@
 .motto-pause{color:#baa3d8}
 .motto-pause[aria-pressed=true]:not(:disabled){color:var(--lime,#c1ff4a);background:#1b2919;border-color:#3a5131}
 .motto-icon{display:block;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-.motto-copy{min-height:78px;margin-top:8px;opacity:1;transform:translateY(0);transition:opacity .16s ease,transform .16s ease}
+.motto-copy{grid-column:1;grid-row:1;min-width:0;margin:0;opacity:1;transform:translateY(0);transition:opacity .16s ease,transform .16s ease}
 .motto-changing .motto-copy{opacity:0;transform:translateY(3px)}
-.motto-latin{margin:0;color:#e5efdd;font-family:var(--font-display,'Space Grotesk',sans-serif);font-size:1.1875rem;font-weight:500;letter-spacing:-.025em;line-height:1.4;text-wrap:pretty;overflow-wrap:anywhere}
-.motto-translation{margin:6px 0 0;color:#96ac92;font-size:.75rem;font-weight:400;letter-spacing:-.005em;line-height:1.6;text-wrap:pretty}
-.vip-motto[data-motto-location=workspace]{display:grid;grid-template-columns:230px minmax(0,1fr);align-items:center;gap:26px;padding:13px 20px 14px;margin-bottom:26px}
-.vip-motto[data-motto-location=workspace] .motto-copy{margin-top:0;min-height:0;padding-left:22px;border-left:1px solid #2f4032}
-.vip-motto[data-motto-location=workspace] .motto-latin{font-size:1.25rem}
+.motto-latin{margin:0;color:#e5efdd;font-family:var(--font-display,'Space Grotesk',sans-serif);font-size:.9375rem;font-weight:500;letter-spacing:-.015em;line-height:1.4;text-wrap:pretty;overflow-wrap:anywhere}
+.motto-translation{margin:3px 0 0;color:#96ac92;font-size:.6875rem;line-height:1.45;text-wrap:pretty;overflow-wrap:anywhere}
 body.effects-off .motto-copy,body.effects-off .motto-button{transition:none}
-@media(max-width:900px){
- .vip-motto[data-motto-location=workspace]{grid-template-columns:210px minmax(0,1fr);gap:18px}
- .vip-motto[data-motto-location=workspace] .motto-copy{padding-left:18px}
- .vip-motto[data-motto-location=workspace] .motto-controls{gap:0}
-}
-@media(max-width:650px){
- .vip-motto,.vip-motto[data-motto-location=workspace]{display:block;padding:11px 13px 13px;margin-bottom:22px}
- .motto-header{gap:7px}.motto-controls{gap:0}
- .motto-kicker{font-size:.55rem;letter-spacing:.09em}
- .motto-position{font-size:.625rem}
- .motto-copy,.vip-motto[data-motto-location=workspace] .motto-copy{min-height:78px;margin-top:7px;padding-left:0;border-left:0}
- .motto-latin,.vip-motto[data-motto-location=workspace] .motto-latin{font-size:1.125rem;line-height:1.4}
- .motto-translation{font-size:.75rem;line-height:1.55}
-}
+@media(max-width:650px){.vip-motto{gap:6px;padding-left:11px}.motto-controls{gap:0}.motto-latin{font-size:.875rem}.motto-translation{font-size:.6875rem}}
 @media(prefers-reduced-motion:reduce){.motto-copy,.motto-button{transition:none}}

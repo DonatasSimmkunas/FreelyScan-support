@@ -10,20 +10,20 @@
   <title>Auctioneer · VIP</title>
   <link rel="icon" href="/vip/favicon.svg?v=2" type="image/svg+xml">
   <link rel="stylesheet" href="/vip/fonts.css?v=1">
-  <link rel="stylesheet" href="/vip/styles.css?v=6">
+  <link rel="stylesheet" href="/vip/styles.css?v=7">
   <link rel="stylesheet" href="/vip/atmosphere.css?v=6">
   <link rel="stylesheet" href="/vip/crawler.css?v=7">
-  <link rel="stylesheet" href="/vip/mottos.css?v=1">
+  <link rel="stylesheet" href="/vip/mottos.css?v=2">
   <link rel="stylesheet" href="/vip/saved-searches.css?v=1">
   <link rel="stylesheet" href="/vip/experience.css?v=1">
   <link rel="stylesheet" href="/vip/hologram.css?v=1">
   <link rel="stylesheet" href="/vip/holo-cards.css?v=1">
-  <script type="module" src="/vip/app.js?v=7"></script>
-  <script type="module" src="/vip/counter.js?v=4"></script>
-  <script type="module" src="/vip/crawler.js?v=7"></script>
-  <script type="module" src="/vip/mottos.js?v=1"></script>
+  <script type="module" src="/vip/app.js?v=8"></script>
+  <script type="module" src="/vip/counter.js?v=5"></script>
+  <script type="module" src="/vip/crawler.js?v=8"></script>
+  <script type="module" src="/vip/mottos.js?v=2"></script>
   <script type="module" src="/vip/experience.js?v=1"></script>
-  <script type="module" src="/vip/hologram.js?v=1"></script>
+  <script type="module" src="/vip/hologram.js?v=2"></script>
   <script type="module" src="/vip/holo-cards.js?v=1"></script>
 </head>
 <body class="login-mode">
@@ -41,12 +41,21 @@
   <div class="lightning-flash" aria-hidden="true"></div>
   <div class="edge-light left" aria-hidden="true"></div><div class="edge-light right" aria-hidden="true"></div>
   <header class="masthead">
+    <div class="masthead-main">
     <a class="brand" href="/" aria-label="Auctioneer pagrindinis puslapis"><span class="brand-mark">A<span>_</span></span><span>auctioneer<span class="brand-sub">PRIVATI ERDVĖ</span></span></a>
     <span class="route mono">/ VIP <span class="muted">/</span> <span id="routeState">PRIEIGA</span></span>
     <div class="global-controls">
       <button id="musicToggle" class="subtle small" type="button" aria-controls="musicDock" aria-expanded="false"><span class="button-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-music"></use></svg></span> <span id="musicLabel">Paleisti dainą</span></button>
       <button id="effectsToggle" class="subtle small" type="button" aria-pressed="true"><span class="neon-dot" aria-hidden="true"></span><span id="effectsLabel">Efektai</span></button>
       <button id="logout" class="subtle small" type="button" hidden><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-logout"></use></svg><span>Atsijungti</span></button>
+    </div>
+    </div>
+    <div class="header-dashboard" aria-label="VIP mintis ir bazės apžvalga">
+      <div id="headerMotto" class="header-motto"></div>
+      <div class="header-counters" aria-label="Bazės ir kontaktų skaitikliai" aria-live="off">
+        <div class="counter-metric" title="Paslaugų teikėjų, įmonių ir darbo skelbimų įrašai"><span class="counter-metric-label"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-database"></use></svg>Bazės duomenų skaičius</span><div class="counter-figures"><strong id="demoDatabaseCount">11 350</strong><small>Realiai: <span id="realDatabaseCount">11 350</span></small></div></div>
+        <div class="counter-metric" title="Įrašai su telefonu arba el. paštu"><span class="counter-metric-label"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-contacts"></use></svg>Kontaktų įrašai</span><div class="counter-figures"><strong id="demoContactCount">5 667</strong><small>Realiai: <span id="realContactCount">5 667</span></small></div></div>
+      </div>
     </div>
   </header>
 
@@ -65,14 +74,6 @@
         <div class="terminal-kicker mono"><span class="cursor" aria-hidden="true">▌</span> AUTORIZACIJA</div>
         <h1>Privati<br><span>prieiga.</span></h1>
         <p class="login-intro">Prisijunkite prie paslaugų teikėjų ir darbdavių kontaktų paieškos.</p>
-        <div class="login-counter" aria-label="Bazės ir kontaktų skaitikliai" aria-live="off">
-          <div class="counter-heading"><span class="login-counter-label">Bazės duomenų skaičius</span></div>
-          <div class="counter-metrics">
-            <div class="counter-metric"><span class="counter-metric-label"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-database"></use></svg>Duomenų įrašai</span><strong id="demoDatabaseCount">11 350</strong><small>Reali bazė: <span id="realDatabaseCount">11 350</span></small></div>
-            <div class="counter-metric"><span class="counter-metric-label"><svg class="ui-icon" aria-hidden="true" focusable="false"><use href="#icon-contacts"></use></svg>Kontaktų įrašai</span><strong id="demoContactCount">5 667</strong><small>Realiai: <span id="realContactCount">5 667</span></small></div>
-          </div>
-          <p class="counter-caption">Duomenys: paslaugų teikėjai, įmonės ir darbo skelbimai. Kontaktai: įrašai su telefonu arba el. paštu.</p>
-        </div>
         <form id="loginForm">
           <label for="username">Vartotojo vardas</label>
           <input id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" enterkeyhint="next" spellcheck="false" required maxlength="100" placeholder="Vartotojo vardas">

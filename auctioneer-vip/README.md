@@ -2,7 +2,7 @@
 
 Papildomas `/vip` modulis esamai `auctioneer.it.com` svetainei. Statinės svetainės `auctioneer-site` šakoje pridedamas tik `auctioneer/vip` aplankas; senieji failai, meniu ir pagrindinis puslapis nekeičiami. Duomenis ir prisijungimą tikrina atskiras Render Node serveris `https://auctioneer-vip.onrender.com`, diegiamas iš `auctioneer-vip` šakos.
 
-Šis dokumentas aprašo dabartinę vietinę laidą. Jos serverio ir sąsajos diegimo bei naršyklės patikros dar reikia; atskirai patvirtintas žemiau aprašytas gyvas crawlerio v8 paleidimas.
+2026-09-28 išplėstas katalogas paskelbtas ir patikrintas gyvomis API užklausomis. Toliau aprašyta ir kompaktiškos antraštės sąsaja; tikro mobiliojo įrenginio patikra neatlikta.
 
 ## Duomenys ir paieška
 
@@ -51,13 +51,15 @@ Cyberpunk prisijungimo iliustracija, neono šviesos, judantis miesto fonas, term
 
 Žemėlapio kontūras paruoštas iš **Natural Earth 110m**, viešojo naudojimo duomenų: https://github.com/nvkelso/natural-earth-vector . Jis pateikiamas su vietiniais failais, be išorinio žemėlapio užklausų veikimo metu. Šriftai „Manrope“ ir „Space Grotesk“ laikomi `/vip/fonts/` su OFL licencijomis.
 
-24 lotyniškos frazės su lietuviškais vertimais abiejuose ekranuose keičiasi kas 10 sekundžių, tik kol puslapis matomas. Yra ankstesnės / kitos frazės ir pauzės valdikliai; sumažinto judesio režimu automatinis keitimas sustoja. Istorinė autorystė neteigiama.
+Viena kompaktiška lotyniškos minties juosta ir bazės bei kontaktų skaitikliai yra bendroje antraštėje, matomi prieš prisijungimą ir prisijungus. 24 frazės su lietuviškais vertimais keičiasi kas 10 sekundžių, tik kol matoma juosta. Yra ankstesnės / kitos frazės ir pauzės valdikliai; sumažinto judesio režimu automatinis keitimas sustoja. Istorinė autorystė neteigiama.
 
 Naudojamas vartotojo pasirinktas vaizdo įrašas https://www.youtube.com/watch?v=WflAReA2cqs per oficialų YouTube IFrame API. Garso failas nekopijuojamas. Matomas grotuvas išlieka prisijungiant, daina kartojama, sąmoningas sustabdymas gerbiamas. Bandoma paleisti automatiškai, o užblokavus garsą — pakartotinai po pirmo paspaudimo ar klavišo. Yra ir rankiniai valdikliai. Naršyklės ir YouTube taisyklės gali neleisti garso be naudotojo veiksmo.
 
 Viešas `/vip/api/totals` pateikia tik kiekius. Bendras duomenų skaičius apima **teikėjus, įmones ir darbo skelbimus**; importų pagrindas yra 11 114, crawlerio radiniai pridedami dinamiškai su sutapimų patikra. Po nurodyto rinkimo vietinė bendro kiekio patikra davė **11 350**: 11 114 importuotų įrašų, 8 surinktos įmonės ir 228 skelbimai. Atskiras kontaktų skaitiklis skaičiuoja įrašus su telefonu arba el. paštu — šioje patikroje 5 667. Serverio skaičių podėlis galioja **30 sekundžių**.
 
-Prisijungimo animacija demonstruoja lėtėjantį logaritminį rodmens augimą, tačiau tikrieji kiekiai pateikti atskirai. Animacija nesaugoma ir nekeičia duomenų bazės ar paieškos rezultatų kiekių.
+Prisijungimo animacija demonstruoja lėtėjantį logaritminį rodmens augimą, tačiau tikrieji kiekiai pateikti atskirai. Prisijungus antraštės pagrindiniai skaičiai taip pat rodo tik realius kiekius. Animacija nesaugoma ir nekeičia duomenų bazės ar paieškos rezultatų kiekių.
+
+Vidinė apžvalga kompaktiška, Lietuvos holograma iš pradžių suskleista, gyvas atradimų srautas pateiktas po paieškos rezultatais prieš puslapio poraštę. Antraštės skaitikliai ir vidiniai katalogų kiekiai atnaujinami kas minutę matomame puslapyje bei gavus pasikeitusią crawlerio būseną; paieškos filtrai ir puslapis išsaugomi. Rodomas paskutinio sėkmingo atnaujinimo laikas.
 
 ## Autentifikacija ir paleidimas
 
@@ -81,6 +83,6 @@ Sesijos ir bandymų ribojimas laikomi vieno serverio atmintyje: perkrovimas pana
 
 **Dabartinė vietinė patikra: 67 / 67 automatinių testų sėkmingi.** Tikrinamos autentifikacijos ir CSRF ribos, CORS / Bearer sesijos, filtrai, teritorijos, darbdavių susiejimai, importų pakartojamumas, išsaugotų paieškų serializavimas, muzikos valdymas ir crawlerio šaltinių bei klaidų apdorojimas.
 
-Ankstesnėje, mažesnio katalogo laidoje buvo patikrintos gyvos HTTPS užklausos, neprieinami privatūs failai, darbalaukio prisijungimas ir nepakitęs pagrindinio puslapio HTML SHA-256. Tai **istorinė patikra**, ne šios sąsajos laidos patvirtinimas. Dabartinės laidos bendras diegimas, naršyklės ir tikro mobiliojo įrenginio patikra dar neatlikti; nenutrūkstamas YouTube atkūrimas taip pat nepatvirtintas. Gyvo crawlerio v8 rezultatas nurodytas atskirai aukščiau.
+2026-09-28 gyvos API patikros rezultatas: 11 350 bendrų įrašų, 5 667 kontaktų įrašai, 5 217 paslaugų teikėjų, 1 512 darbdavių ir 4 621 darbo skelbimas. Patvirtinta crawlerio įmonių paieška bei detalės, 401 neprisijungus, 403 klaidingam CSRF ir sesijos panaikinimas atsijungus. Patikrinti paskelbti statiniai failai ir nepakitęs pagrindinio puslapio HTML SHA-256. Viešas prisijungimo ekranas ir frazių valdikliai patikrinti naršyklėje. Tikro mobiliojo įrenginio ir visų vidinių vizualų naršyklės patikra neatlikta. YouTube šiai testavimo naršyklei pateikė robotų patikrą, todėl garso atkūrimas nepatvirtintas.
 
 50 papildomų idėjų pateikta `50-patobulinimu.md`.

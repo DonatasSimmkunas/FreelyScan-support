@@ -102,12 +102,12 @@ returns jsonb language sql stable security invoker set search_path=public,pg_tem
     or exists(select 1 from public.vip_crawler_jobs j where j.company_id=c.id and j.status='open' and j.last_seen>=now()-interval '48 hours' and (j.expires_at is null or j.expires_at>=now()) and strpos(lower(j.title),lower(left(p_q,200)))>0))
    and (p_kind<>'hiring' or exists(select 1 from public.vip_crawler_jobs j where j.company_id=c.id and j.status='open' and j.last_seen>=now()-interval '48 hours' and (j.expires_at is null or j.expires_at>=now())))
    and (p_legal_form='' or c.legal_form=p_legal_form)
- ), filtered as (select * from candidates where p_city='' or city_area=p_city), counts as (select count(*) as total,case when p_page_size=50 then 50 else 25 end as size from filtered),
+ ), filtered as (select * from candidates where p_city='' or exists(select 1 from regexp_split_to_table(city_area,'[;/]') as place where btrim(place)=p_city)), counts as (select count(*) as total,case when p_page_size=50 then 50 else 25 end as size from filtered),
  paging as (select total,size,greatest(1,ceil(total::numeric/size)::integer) as pages,greatest(1,least(coalesce(p_page,1),greatest(1,ceil(total::numeric/size)::integer))) as page from counts),
  selected as (select f.* from filtered f order by case when p_sort='name' then f.provider end asc,case when p_sort<>'name' then f.first_seen end desc,f.id limit (select size from paging) offset (select (page-1)*size from paging))
  select jsonb_build_object('total',p.total,'page',p.page,'pages',p.pages,'pageSize',p.size,
   'records',coalesce((select jsonb_agg(to_jsonb(c)||jsonb_build_object('jobs',coalesce((select jsonb_agg(jsonb_build_object('id',j.id,'title',j.title,'city_area',j.city_area,'url',j.url,'status',j.status,'published_at',j.published_at,'expires_at',j.expires_at,'source_id',j.source_id) order by j.published_at desc nulls last,j.id) from public.vip_crawler_jobs j where j.company_id=c.id and j.status='open' and j.last_seen>=now()-interval '48 hours' and (j.expires_at is null or j.expires_at>=now())),'[]'::jsonb))) from selected c),'[]'::jsonb),
-  'cities',coalesce((select jsonb_agg(city_area order by city_area) from (select distinct city_area from candidates where city_area<>'' order by city_area limit 1000) x),'[]'::jsonb),
+  'cities',coalesce((select jsonb_agg(city_area order by city_area) from (select distinct btrim(place) as city_area from candidates cross join lateral regexp_split_to_table(city_area,'[;/]') as place where btrim(place)<>'' order by city_area limit 1000) x),'[]'::jsonb),
   'legalForms',coalesce((select jsonb_agg(legal_form order by legal_form) from (select distinct legal_form from public.vip_crawler_companies where legal_form<>'' limit 500) x),'[]'::jsonb)
  ) from paging p;
 $$;

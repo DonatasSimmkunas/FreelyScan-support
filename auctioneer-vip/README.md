@@ -79,7 +79,7 @@ Neono vamzdeliai yra 24 px storio ir 65 vh aukščio (telefone 12 px ir 50 vh). 
 
 - Originali cyberpunk personažė lieka prisijungimo ekrane; jos nuotraukos miesto šviesos, lietus ir šviesos pėdsakai juda kartu su nuotrauka.
 - Aktyvių filtrų žymos leidžia pašalinti atskirą filtrą vienu paspaudimu. Paieškos tekstą galima išvalyti atskirai. Telefone yra grįžimo į rezultatų viršų veiksmas.
-- Prisijungimo skaitiklis aiškiai pažymėtas kaip demonstracinis. Atskaitos taškas 6 004 pagrindiniai importuoti įrašai, mažas logaritminis prieaugis nesaugomas ir nekeičia duomenų bazės ar paieškos kiekių.
+- Po animuotais prisijungimo skaitikliais atskirai pateikti tikrieji kiekiai. Atskaitos taškas 6 004 pagrindiniai importuoti įrašai, mažas logaritminis prieaugis nesaugomas ir nekeičia duomenų bazės ar paieškos kiekių.
 - Dekoratyvinės kaukolės ir humoristinis užrašas neteigia apie tikrą neteisėtą veiklą.
 
 ## Automatinis naujų duomenų rinkimas
@@ -96,7 +96,7 @@ Vieno proceso terminas 85 s, vieno šaltinio 20 s, iki 250 įmonių ir 250 skelb
 
 Diegiant `crawler/edge.mjs` hash žyma pakeičiama atskiro rakto SHA-256 tik diegimo kopijoje. Pats raktas lieka Render aplinkoje ir Supabase Vault. `.env.example` aprašo naujus kintamuosius be reikšmių.
 
-Viešas `/vip/api/totals` grąžina tik skaičius: importuotų ir surinktų įrašų sumą bei įrašus su telefonu arba el. paštu. Kontaktų skaičius nėra unikalių žmonių skaičius. Pradinė bazė 6 004 įrašai, iš jų 5 407 su kontaktu. Prisijungimo demonstracinė animacija atskirai padidina rodmenis, maždaug +78 / +56 per pirmą minutę, lėtėdama pagal logaritmą; reali bazė rodoma atskirai. Duomenų lentelių skaičiai visada tikri.
+Viešas `/vip/api/totals` grąžina tik skaičius: importuotų ir surinktų įrašų sumą bei įrašus su telefonu arba el. paštu. Kontaktų skaičius nėra unikalių žmonių skaičius. Pradinė bazė 6 004 įrašai, iš jų 5 407 su kontaktu. Prisijungimo animacija atskirai padidina rodmenis, maždaug +78 / +56 per pirmą minutę, lėtėdama pagal logaritmą; reali bazė rodoma atskirai. Duomenų lentelių skaičiai visada tikri.
 
 Šriftai „Manrope“ ir „Space Grotesk“ pateikiami iš `/vip/fonts/`, su lotynų ir išplėstinių lotynų rašmenų palaikymu; OFL licencijos išsaugotos šalia. Piktogramos vienodo SVG linijų stiliaus. Viso ekrano žaibai turi retus atskirus trumpus šviesos impulsus, netrukdo paspaudimams ir išsijungia su efektų valdikliu arba reduced-motion.
 

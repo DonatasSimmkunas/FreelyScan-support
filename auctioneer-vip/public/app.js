@@ -10,6 +10,21 @@ const phoneURL=value=>{const s=String(value||'').replace(/[\s()-]/g,'');return /
 const emailURL=value=>{const s=String(value||'').trim();return /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(s)?'mailto:'+encodeURIComponent(s):null;};
 let csrf='',metadata=null,rows=[],page=1,pages=1,requestSerial=0,pendingRequest=null,debounceId,toastTimer;
 const operators=[['contains','Turi tekstą'],['not_contains','Neturi teksto'],['eq','Lygu'],['neq','Nelygu'],['gte','Ne mažiau nei'],['lte','Ne daugiau nei'],['missing','Trūksta reikšmės'],['present','Reikšmė nurodyta']];
+const mobileLayout=matchMedia('(max-width: 650px)');
+function syncFilterLayout(){$('filterPanel').open=!mobileLayout.matches;}
+syncFilterLayout();mobileLayout.addEventListener('change',syncFilterLayout);
+function activeFilters(){
+  const count=['category','city','coverage','unit','minPrice','maxPrice'].filter(id=>$(id).value!=='').length
+    +['includeNationwide','withPhone','withEmail','withPrice'].filter(id=>$(id).checked).length;
+  $('activeFilterCount').textContent=String(count);
+}
+function revealResults(){
+  if(!mobileLayout.matches)return;
+  $('filterPanel').open=false;
+  document.activeElement?.blur();
+  $('resultsToolbar').scrollIntoView({block:'start',behavior:'instant'});
+  $('resultsToolbar').focus({preventScroll:true});
+}
 
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
 function clearSensitiveView(message=''){
@@ -38,7 +53,9 @@ async function enter(session){
   $('statRecords').textContent=fmt.format(metadata.total);$('statCategories').textContent=fmt.format(metadata.categories.length);$('statCities').textContent=fmt.format(metadata.cities.length);$('statPriced').textContent=fmt.format(metadata.total-metadata.missingPrice);
   $('sourceCount').textContent=`${fmt.format(metadata.total)} įrašų · ${metadata.fields.length} laukų`;
   $('loginView').hidden=true;$('appView').hidden=false;$('logout').hidden=false;document.body.classList.remove('login-mode');$('routeState').textContent='PAIEŠKA';$('password').value='';
-  updateTerritory();await search(1);$('q').focus({preventScroll:true});
+  syncFilterLayout();updateTerritory();await search(1);
+  if(mobileLayout.matches){document.activeElement?.blur();$('appView').scrollIntoView({block:'start',behavior:'instant'});}
+  else $('q').focus({preventScroll:true});
 }
 $('loginForm').addEventListener('submit',async event=>{
   event.preventDefault();$('loginError').textContent='';$('loginButton').disabled=true;$('loginButton').firstElementChild.textContent='Tikrinama…';
@@ -56,13 +73,14 @@ function searchInput(targetPage=1){return{q:$('q').value,category:$('category').
   sort:$('sort').value,page:targetPage,pageSize:Number($('pageSize').value),rules:rules(),ruleMode:$('ruleMode').value};}
 async function search(targetPage=1){
   if(!csrf)return;
+  activeFilters();
   clearTimeout(debounceId);const serial=++requestSerial;pendingRequest?.abort();pendingRequest=new AbortController();
   $('loading').hidden=false;$('resultsBody').setAttribute('aria-busy','true');$('searchError').hidden=true;$('ruleCount').textContent=String(rules().length);
   try{
     const result=await api('search',{payload:searchInput(targetPage),signal:pendingRequest.signal});
     if(serial!==requestSerial)return;
     rows=result.records;page=result.page;pages=result.pages;
-    $('resultCount').textContent=fmt.format(result.total);$('unitNotice').hidden=!result.mixedUnits;
+    $('resultCount').textContent=fmt.format(result.total);$('mobileResultCount').textContent=fmt.format(result.total);$('unitNotice').hidden=!result.mixedUnits;
     $('emptyState').hidden=result.total!==0;$('resultsTable').hidden=result.total===0;
     $('pageInfo').textContent=result.total?`${(page-1)*result.pageSize+1}–${Math.min(page*result.pageSize,result.total)} iš ${fmt.format(result.total)}`:'0 įrašų';
     $('previousPage').disabled=page<=1;$('nextPage').disabled=page>=pages;
@@ -78,7 +96,7 @@ function renderRows(){
       <td data-label="Telefonas">${r.company_phone?`${phone?`<a class="phone-link" href="${esc(phone)}">${esc(r.company_phone)}</a>`:`<span class="phone-link">${esc(r.company_phone)}</span>`}<button type="button" class="phone-copy" data-copy="${esc(r.id)}">Kopijuoti</button>`:'<span class="no-value">Telefonas<br>nenurodytas</span>'}</td>
       <td class="price-col" data-label="Įkainis">${typeof r.price_value==='number'?`<strong class="price-value">${fmt.format(r.price_value)} €</strong><span class="price-unit">${esc(priceSuffix(r.price_unit))}</span>`:'<span class="no-value">Kaina<br>nenurodyta</span>'}</td>
       <td data-label="Įvertinimas">${isMissing(r.rating)?'<span class="no-value">Neįvertinta</span>':`<span class="rating-value"><span class="rating-star" aria-label="Įvertinimas">★</span>${fmt.format(r.rating)}</span><span class="reviews-count">${isMissing(r.reviews)?'Atsiliepimų nenurodyta':fmt.format(r.reviews)+' atsiliepimų'}</span>`}</td>
-      <td><button class="subtle detail-button" type="button" data-record="${esc(r.id)}" aria-label="Visa informacija: ${esc(r.provider)}">↗</button></td></tr>`;
+      <td><button class="subtle detail-button" type="button" data-record="${esc(r.id)}" aria-label="Visa informacija: ${esc(r.provider)}"><span class="detail-button-label">Info </span>↗</button></td></tr>`;
   }).join('');
 }
 function detail(id){
@@ -92,7 +110,7 @@ function detail(id){
     return esc(value);
   };
   $('detailContent').innerHTML=`<h2 id="detailTitle" class="detail-title">${esc(record.provider)}</h2><p class="detail-category">${esc(record.category||'Kategorija nenurodyta')}</p><div class="detail-price">${typeof record.price_value==='number'?esc(record.price_raw):'Kaina nenurodyta'}</div><div class="detail-actions">${phone?`<a class="primary" href="${esc(phone)}">Skambinti</a>`:''}${email?`<a class="subtle" href="${esc(email)}">Rašyti el. laišką</a>`:''}${profile?`<a class="subtle" href="${esc(profile)}" target="_blank" rel="noopener noreferrer">Atidaryti profilį ↗</a>`:''}</div><dl class="detail-fields">${metadata.fields.map(f=>`<dt>${esc(f.label)}</dt><dd>${pretty(f.key,record[f.key])}</dd>`).join('')}</dl>`;
-  $('detailDialog').showModal();
+  $('detailDialog').showModal();$('detailDialog').scrollTop=0;$('closeDetail').focus({preventScroll:true});
 }
 $('resultsBody').addEventListener('click',async event=>{
   const info=event.target.closest('[data-record]');if(info){detail(info.dataset.record);return;}
@@ -103,14 +121,15 @@ $('detailDialog').addEventListener('click',event=>{if(event.target===$('detailDi
 
 function updateTerritory(){$('includeNationwide').disabled=!$('city').value;if(!$('city').value)$('includeNationwide').checked=false;}
 function scheduleSearch(){clearTimeout(debounceId);debounceId=setTimeout(()=>search(1),300);}
-$('searchForm').addEventListener('submit',event=>{event.preventDefault();search(1);});
+$('searchForm').addEventListener('submit',async event=>{event.preventDefault();await search(1);revealResults();});
+$('showResults').addEventListener('click',async()=>{await search(1);revealResults();});
 $('searchForm').addEventListener('input',event=>{if(event.target.tagName==='INPUT')scheduleSearch();});
 $('searchForm').addEventListener('change',event=>{
   if(event.target.id==='city')updateTerritory();
   if(event.target.matches('.rule-field,.rule-op'))configureRule(event.target.closest('.rule-row'),event.target.classList.contains('rule-field'));
   search(1);
 });
-$('previousPage').addEventListener('click',()=>search(page-1));$('nextPage').addEventListener('click',()=>search(page+1));
+$('previousPage').addEventListener('click',async()=>{await search(page-1);revealResults();});$('nextPage').addEventListener('click',async()=>{await search(page+1);revealResults();});
 function reset(){if(!metadata)return;$('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';updateTerritory();search(1);}
 $('resetFilters').addEventListener('click',reset);$('emptyReset').addEventListener('click',reset);
 function configureRule(row,fieldChanged=false){
@@ -121,6 +140,9 @@ function configureRule(row,fieldChanged=false){
   const value=row.querySelector('.rule-value');
   value.disabled=['missing','present'].includes(op.value);
   value.type=['gte','lte'].includes(op.value)?'number':'text';value.step='any';
+  value.inputMode=isNumber?'decimal':field==='company_phone'?'tel':field==='company_email'?'email':field.endsWith('_url')?'url':'text';
+  value.enterKeyHint='search';
+  value.autocapitalize='none';
   value.placeholder=value.disabled?'Reikšmės nereikia':isNumber?'Skaičius arba tekstas':'Įveskite reikšmę';
   if(fieldChanged)value.value='';
 }

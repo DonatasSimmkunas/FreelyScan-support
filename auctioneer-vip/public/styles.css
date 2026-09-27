@@ -10,3 +10,60 @@ body.effects-off .edge-light,body.effects-off .scanline{display:none}body.effect
 .login-mode .music-dock{left:26px;right:auto;bottom:26px}
 @media(max-width:650px){.filters>.filter-block:nth-child(2){grid-column:1/-1}.music-dock,.login-mode .music-dock{position:relative;left:auto;right:auto;bottom:auto;margin:18px auto}}
 @media(max-width:380px){.brand-sub{display:none}.global-controls .small{font-size:.65rem;padding:6px}.global-controls{gap:4px}.brand{gap:7px;font-size:.95rem}.login-panel h1{font-size:2.5rem}.filters{grid-template-columns:1fr}.filter-block{grid-column:1!important}.filter-block+.filter-block{border-top:1px solid var(--line);padding-top:18px}.sort-control select{width:165px}.result-count>span{font-size:.7rem}.source-info{display:none}}
+
+/* Compact filters stay expanded on desktop and collapse above mobile results. */
+.filter-panel{min-width:0;align-self:start}.filter-summary,.mobile-filter-action,.detail-button-label{display:none}
+body:has(#detailDialog[open]){overflow:hidden}
+@media(max-width:650px){
+  body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  .masthead{padding-top:max(15px,env(safe-area-inset-top));align-items:center}
+  .global-controls{flex-wrap:wrap;gap:8px}
+  button,.global-controls .small,.global-controls button#effectsToggle,.pagination button,.dialog-top button,.music-dock-head button{min-height:44px;min-width:44px}
+  .global-controls button#effectsToggle{width:44px}.global-controls .small{padding:9px 10px;font-size:.75rem}
+  .text-button{padding:8px 4px}.password-input button{min-width:64px}
+  body input:not([type=checkbox]),body select{font-size:16px;min-height:46px}
+  .search-bar{min-width:0}.search-bar input{min-width:0}.search-symbol{padding:0 4px}
+  .workspace{padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .workspace-head{flex-wrap:wrap;gap:12px}.source-info{text-align:left}
+  .filter-panel{width:100%;border:1px solid var(--line);border-radius:6px;background:#0e1313}
+  .filter-summary{display:flex;align-items:center;justify-content:space-between;min-height:60px;padding:12px 18px;list-style:none;font-weight:600}
+  .filter-summary::-webkit-details-marker{display:none}.filter-summary>span:first-child{display:flex;align-items:center;gap:10px}
+  .filter-chevron{font-size:1.5rem;color:var(--lime)}.filter-panel[open] .filter-chevron{transform:rotate(180deg)}
+  .filter-panel[open] .filter-summary{border-bottom:1px solid var(--line)}
+  .filter-panel:not([open])>.filters{display:none}
+  .filters{border:0;border-radius:0;grid-template-columns:minmax(0,1fr);gap:18px;padding:0 18px 18px;background:transparent}
+  .filters>.section-heading{justify-content:flex-end;margin:0}.filters>.section-heading h2{display:none}
+  .filters>.filter-block{grid-column:1!important;min-width:0}.filter-block+.filter-block{border-top:1px solid var(--line);padding-top:18px}
+  .filter-block label{font-size:.875rem}.filter-block .eyebrow{font-size:.7rem}
+  .filter-block .check-line{min-height:44px;align-items:center;margin:6px 0;font-size:.875rem;gap:12px}
+  .check-line input{width:20px;height:20px;flex-basis:20px;margin:0}
+  .filter-block:last-of-type{display:block}.filter-block:last-of-type>.eyebrow{margin-bottom:10px}
+  .mobile-filter-action{display:flex;grid-column:1/-1;justify-content:space-between;width:100%;min-height:48px}
+  .field-note,.notice p{font-size:.8125rem;line-height:1.55}
+  .advanced-top{flex-direction:column;align-items:stretch;gap:8px}.advanced-top select{max-width:none}
+  .rule-row{grid-template-columns:minmax(0,1fr) 44px;gap:8px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .rule-row select:first-child{grid-column:1;grid-row:1}.rule-row select:nth-child(2){grid-column:1;grid-row:2}
+  .rule-row input{grid-column:1;grid-row:3}.rule-row .remove-rule{grid-column:2;grid-row:1;align-self:start}
+  .results-toolbar{flex-direction:column;align-items:stretch;gap:12px;scroll-margin-top:16px}
+  .result-count{min-height:32px}.result-count>span{font-size:.875rem}.sort-control{width:100%;justify-content:space-between;gap:12px}
+  .sort-control label{font-size:.875rem;flex-shrink:0}.sort-control select{width:100%;max-width:none}
+  .provider-name,.category-text,.area-main,.area-detail,.price-value,.price-unit{overflow-wrap:anywhere;white-space:normal}
+  .provider-name{min-height:44px}.area-main{font-size:.875rem}.area-detail,.price-unit,.reviews-count{font-size:.75rem}
+  td:nth-child(4){max-width:124px}.phone-link{font-size:.9375rem}
+  a.phone-link{display:inline-flex;align-items:center;min-height:44px}.phone-copy{display:block;margin:0;padding:0 4px;font-size:.8125rem;text-align:left}
+  .detail-button{height:44px;width:auto;padding:0 10px;font-size:.875rem}.detail-button-label{display:inline}
+  .pagination{flex-wrap:wrap;gap:12px}.pagination #pageInfo{font-size:.75rem;margin-left:auto}
+  .pagination>div:last-child{width:100%;justify-content:space-between}.pagination button{width:calc(50% - 6px)}
+  .page-size select{height:46px;width:76px}.page-size label{font-size:.875rem}
+  dialog#detailDialog{width:100%;max-width:none;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0;padding:max(18px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+  .dialog-top{position:sticky;top:0;z-index:1;background:#101616;padding:8px 0;border-bottom:1px solid var(--line)}
+  .detail-title{overflow-wrap:anywhere}.detail-actions{display:grid;grid-template-columns:1fr}
+  .detail-actions a{min-height:48px;font-size:.9375rem}.detail-fields{grid-template-columns:1fr}
+  .detail-fields dt{font-size:.8125rem;padding:14px 0 6px}.detail-fields dd{border-top:0;padding:0 0 14px;font-size:.9375rem}
+  .detail-fields dd a{display:inline-flex;min-height:44px;align-items:center;overflow-wrap:anywhere;max-width:100%}
+  .music-dock,.login-mode .music-dock{position:relative;left:auto;right:auto;bottom:auto;width:calc(100% - 32px);max-width:380px;margin:18px auto;scroll-margin-top:16px}
+  .music-note{font-size:.8125rem}.music-note a{min-height:44px;display:inline-flex;align-items:center}
+  .toast{bottom:max(20px,env(safe-area-inset-bottom));max-width:calc(100vw - 32px);text-align:center;font-size:.875rem}
+  .login-footer{position:static;flex-wrap:wrap;margin-top:32px;align-self:stretch;font-size:.65rem}
+  .login-panel{padding-bottom:max(28px,env(safe-area-inset-bottom))}.workspace-footer{font-size:.75rem}
+}

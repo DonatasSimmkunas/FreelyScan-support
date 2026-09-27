@@ -1,14 +1,17 @@
 import {readFile} from 'node:fs/promises';
 import {createDecipheriv} from 'node:crypto';
+import {gunzipSync} from 'node:zlib';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createCatalog} from './catalog.mjs';
+import {createEmployerCatalog} from './employers.mjs';
 import {createAuth} from './auth.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PUBLIC_FILES={
   '/vip/':['index.html','text/html; charset=utf-8'],
   '/vip/app.js':['app.js','text/javascript; charset=utf-8'],
   '/vip/styles.css':['styles.css','text/css; charset=utf-8'],
+  '/vip/atmosphere.css':['atmosphere.css','text/css; charset=utf-8'],
   '/vip/music.js':['music.js','text/javascript; charset=utf-8'],
   '/vip/login-art.png':['login-art.png','image/png'],
   '/vip/favicon.svg':['favicon.svg','image/svg+xml']
@@ -16,7 +19,7 @@ const PUBLIC_FILES={
 const HEADERS={
   'Cache-Control':'no-store, private','Pragma':'no-cache','X-Robots-Tag':'noindex, nofollow, noarchive',
   'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'no-referrer',
-  'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  'Content-Security-Policy':"default-src 'self'; script-src 'self' https://www.youtube.com; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   'Permissions-Policy':'camera=(), microphone=(), geolocation=()'
 };
 const CORS_METHODS=new Set(['GET','POST','OPTIONS']);
@@ -33,10 +36,17 @@ export async function createVipHandler(env=process.env){
   if(!/^[a-f\d]{64}$/.test(env.VIP_DATA_KEY||''))throw new Error('Nesukonfigūruotas duomenų raktas.');
   const auth=createAuth({username:env.VIP_USERNAME,passwordHash:env.VIP_PASSWORD_HASH,secure:production});
   const encrypted=await readFile(path.join(root,'private/catalog.enc'));
-  if(encrypted.subarray(0,4).toString()!=='VIP1')throw new Error('Neatpažintas duomenų failas.');
+  const format=encrypted.subarray(0,4).toString();
+  if(!['VIP1','VIP2'].includes(format))throw new Error('Neatpažintas duomenų failas.');
   const decipher=createDecipheriv('aes-256-gcm',Buffer.from(env.VIP_DATA_KEY,'hex'),encrypted.subarray(4,16));
   decipher.setAuthTag(encrypted.subarray(16,32));
-  const catalog=createCatalog(JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(32)),decipher.final()]).toString('utf8')));
+  const plaintext=Buffer.concat([decipher.update(encrypted.subarray(32)),decipher.final()]);
+  const payload=JSON.parse((format==='VIP2'?gunzipSync(plaintext):plaintext).toString('utf8'));
+  const catalog=createCatalog(Array.isArray(payload)?payload:payload.providers);
+  const employers=createEmployerCatalog(Array.isArray(payload)?{companies:[],jobs:[],contactSources:[]}:payload.employers);
+  const catalogs={services:catalog,employers};
+  const niches=[{id:'services',label:'Paslaugų teikėjai',total:catalog.metadata.total},{id:'employers',label:'Įmonės ieško darbininkų',total:employers.metadata.total}].filter(n=>n.total>0);
+  const chooseCatalog=niche=>{const key=niche||'services';if(!Object.hasOwn(catalogs,key))throw new Error('Nežinoma paieškos skiltis.');return catalogs[key];};
   const assets=new Map(await Promise.all(Object.entries(PUBLIC_FILES).map(async([url,[file,type]])=>[url,{body:await readFile(path.join(root,'public',file)),type}])));
   return async function vipHandler(req,res){
     let cors={};
@@ -77,8 +87,14 @@ export async function createVipHandler(env=process.env){
       if(!s){send(401,{error:'Prisijunkite, kad matytumėte duomenis.'});return true;}
       if(req.method==='POST'&&!auth.csrfValid(s,req.headers['x-vip-csrf'])){send(403,{error:'Sesija neatitinka. Prisijunkite iš naujo.'});return true;}
       if(url.pathname==='/vip/api/session'&&req.method==='GET')send(200,{username:s.username,csrf:s.csrf});
-      else if(url.pathname==='/vip/api/metadata'&&req.method==='GET')send(200,catalog.metadata);
-      else if(url.pathname==='/vip/api/search'&&req.method==='POST')send(200,catalog.search(await jsonBody(req)));
+      else if(url.pathname==='/vip/api/metadata'&&req.method==='GET')send(200,{...chooseCatalog(url.searchParams.get('niche')).metadata,niches});
+      else if(url.pathname==='/vip/api/search'&&req.method==='POST'){
+        const input=await jsonBody(req);send(200,chooseCatalog(input.niche).search(input));
+      }
+      else if(/^\/vip\/api\/employers\/[A-Za-z0-9_-]+$/.test(url.pathname)&&req.method==='GET'){
+        const record=employers.detail(url.pathname.split('/').at(-1));
+        send(record?200:404,record||{error:'Įmonė nerasta.'});
+      }
       else if(url.pathname==='/vip/api/logout'&&req.method==='POST'){
         const cookie=auth.logout(s);
         send(200,{ok:true},undefined,req.headers.authorization===undefined?{'Set-Cookie':cookie}:{});

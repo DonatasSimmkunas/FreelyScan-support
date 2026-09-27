@@ -1,0 +1,213 @@
+/* Decorative atmosphere stays above the body paint and below all page content. */
+body{isolation:isolate}
+#ambientBackground{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  overflow:hidden;
+  pointer-events:none;
+  contain:strict;
+  background:
+    radial-gradient(ellipse at 100% 12%,#845ac71a 0,transparent 48%),
+    radial-gradient(ellipse at 4% 88%,#81b93615 0,transparent 48%);
+}
+#ambientBackground i,#ambientBackground::before,#ambientBackground::after{
+  position:absolute;
+  display:block;
+  pointer-events:none;
+}
+#ambientBackground::before{
+  content:"";
+  inset:0;
+  z-index:2;
+  background:radial-gradient(ellipse at 55% 43%,#090c0d80 0,transparent 75%);
+}
+#ambientBackground::after{
+  content:"";
+  left:0;
+  right:0;
+  top:12%;
+  height:1px;
+  background:linear-gradient(90deg,transparent 12%,#c1ff4a16 42%,#b798ef36 80%,transparent);
+  animation:ambient-scan 26s ease-in-out infinite alternate;
+}
+.ambient-grid{
+  inset:-64px;
+  background-image:
+    linear-gradient(#b798ef0d 1px,transparent 1px),
+    linear-gradient(90deg,#c1ff4a0e 1px,transparent 1px);
+  background-size:64px 64px;
+  -webkit-mask-image:linear-gradient(130deg,#000,transparent 54%,#000);
+  mask-image:linear-gradient(130deg,#000,transparent 54%,#000);
+  animation:ambient-grid-drift 28s linear infinite;
+}
+.ambient-orbit{
+  width:360px;
+  height:360px;
+  border:1px solid #c1ff4a23;
+  border-radius:36px;
+  transform:rotate(34deg);
+}
+.ambient-orbit::before,.ambient-orbit::after{
+  content:"";
+  position:absolute;
+  inset:15px;
+  border:1px solid #c1ff4a0e;
+  border-radius:25px;
+}
+.ambient-orbit::after{
+  inset:-1px;
+  border-color:transparent;
+  border-top-color:#c1ff4a70;
+  border-radius:36px;
+  width:72px;
+}
+.orbit-a{
+  right:-155px;
+  top:18%;
+  animation:ambient-orbit-a 24s ease-in-out infinite alternate;
+}
+.orbit-b{
+  left:-220px;
+  bottom:-120px;
+  width:480px;
+  height:480px;
+  border-color:#b798ef2c;
+  animation:ambient-orbit-b 30s ease-in-out infinite alternate;
+}
+.orbit-b::before{border-color:#b798ef10}
+.orbit-b::after{border-top-color:#b798ef60}
+.ambient-beam{
+  width:1px;
+  height:320px;
+  background:linear-gradient(transparent,#c1ff4a4a,transparent);
+  transform:rotate(32deg);
+}
+.beam-a{
+  right:11%;
+  top:-90px;
+  animation:ambient-beam-a 18s ease-in-out infinite alternate;
+}
+.beam-b{
+  left:17%;
+  bottom:-160px;
+  height:450px;
+  background:linear-gradient(transparent,#b798ef4a,transparent);
+  animation:ambient-beam-b 22s ease-in-out infinite alternate;
+}
+.ambient-spark{
+  width:36px;
+  height:2px;
+  background:#c1ff4a8c;
+  box-shadow:0 0 12px #c1ff4a3d;
+}
+.ambient-spark::after{
+  content:"";
+  position:absolute;
+  top:-5px;
+  left:7px;
+  width:1px;
+  height:12px;
+  background:inherit;
+}
+.spark-a{
+  right:5%;
+  top:62%;
+  animation:ambient-lamp 12s steps(1,end) infinite;
+}
+.spark-b{
+  left:4%;
+  top:26%;
+  width:22px;
+  background:#b798ef80;
+  box-shadow:0 0 12px #b798ef38;
+  animation:ambient-lamp 14s steps(1,end) -5s infinite;
+}
+/* The lamps dim irregularly; every state lasts at least 720 ms. */
+.edge-light{
+  top:20%;
+  width:12px;
+  height:48vh;
+  max-height:560px;
+  border-radius:999px;
+  animation:ambient-lamp 12s steps(1,end) infinite;
+}
+.edge-light.left{
+  left:6px;
+  background:linear-gradient(90deg,#8cbe34,#f3ffcf 44%,#c1ff4a 68%,#769d2e);
+  box-shadow:0 0 14px #c1ff4a80,0 0 40px #9dd63738;
+}
+.edge-light.right{
+  right:6px;
+  top:33%;
+  background:linear-gradient(90deg,#7958aa,#ece1ff 44%,#c5a0ff 68%,#8160ad);
+  box-shadow:0 0 14px #c5a0ff80,0 0 40px #a175df38;
+  animation-delay:-5.2s;
+}
+.edge-light::after{
+  content:"";
+  position:absolute;
+  top:calc(100% + 18px);
+  left:0;
+  width:100%;
+  height:44px;
+  border-radius:inherit;
+  background:inherit;
+  box-shadow:inherit;
+}
+@keyframes ambient-grid-drift{
+  from{transform:translate3d(0,0,0)}
+  to{transform:translate3d(64px,64px,0)}
+}
+@keyframes ambient-scan{
+  from{transform:translate3d(0,0,0);opacity:.35}
+  to{transform:translate3d(0,72vh,0);opacity:.8}
+}
+@keyframes ambient-orbit-a{
+  from{transform:translate3d(0,-30px,0) rotate(34deg);opacity:.65}
+  to{transform:translate3d(-42px,38px,0) rotate(48deg);opacity:1}
+}
+@keyframes ambient-orbit-b{
+  from{transform:translate3d(-15px,20px,0) rotate(34deg);opacity:.55}
+  to{transform:translate3d(44px,-35px,0) rotate(19deg);opacity:.9}
+}
+@keyframes ambient-beam-a{
+  from{transform:translate3d(0,0,0) rotate(32deg);opacity:.4}
+  to{transform:translate3d(-60px,100px,0) rotate(32deg);opacity:.9}
+}
+@keyframes ambient-beam-b{
+  from{transform:translate3d(0,0,0) rotate(32deg);opacity:.75}
+  to{transform:translate3d(55px,-110px,0) rotate(32deg);opacity:.3}
+}
+@keyframes ambient-lamp{
+  0%,100%{opacity:.82}
+  12%{opacity:.45}
+  18%{opacity:.76}
+  30%{opacity:.76}
+  37%{opacity:.32}
+  53%{opacity:.68}
+  59%{opacity:.88}
+  74%{opacity:.52}
+  81%{opacity:.82}
+  94%{opacity:.56}
+}
+@media(max-width:650px){
+  .ambient-grid{background-size:64px 64px;opacity:.75}
+  .ambient-orbit{width:280px;height:280px}
+  .orbit-a{right:-205px;top:38%}
+  .orbit-b{left:-210px;bottom:-60px}
+  .beam-b,.spark-b{display:none}
+  .beam-a{right:2%;height:230px}
+  .spark-a{right:14px;top:79%}
+  .edge-light{width:7px;height:35vh;max-height:300px;opacity:.6}
+  .edge-light.left{left:0;top:24%}
+  .edge-light.right{right:0;top:49%}
+  .edge-light::after{height:28px;top:calc(100% + 12px)}
+}
+body.effects-off #ambientBackground{display:none}
+body.effects-off #ambientBackground *,body.effects-off #ambientBackground::before,body.effects-off #ambientBackground::after,
+body.effects-off .edge-light,body.effects-off .edge-light::after{animation:none!important}
+@media(prefers-reduced-motion:reduce){
+  #ambientBackground,.edge-light{display:none}
+  #ambientBackground *,#ambientBackground::before,#ambientBackground::after,.edge-light,.edge-light::after{animation:none!important}
+}

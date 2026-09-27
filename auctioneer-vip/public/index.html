@@ -4,15 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex, nofollow, noarchive">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://auctioneer-vip.onrender.com; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.youtube.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://auctioneer-vip.onrender.com; frame-src https://www.youtube-nocookie.com; object-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#080b0c">
   <title>Auctioneer · VIP</title>
-  <link rel="icon" href="/vip/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/vip/styles.css">
-  <script type="module" src="/vip/app.js"></script>
+  <link rel="icon" href="/vip/favicon.svg?v=2" type="image/svg+xml">
+  <link rel="stylesheet" href="/vip/styles.css?v=2">
+  <link rel="stylesheet" href="/vip/atmosphere.css?v=2">
+  <script type="module" src="/vip/app.js?v=2"></script>
 </head>
 <body class="login-mode">
+  <div id="ambientBackground" aria-hidden="true"><i class="ambient-grid"></i><i class="ambient-orbit orbit-a"></i><i class="ambient-orbit orbit-b"></i><i class="ambient-beam beam-a"></i><i class="ambient-beam beam-b"></i><i class="ambient-spark spark-a"></i><i class="ambient-spark spark-b"></i></div>
   <div class="edge-light left" aria-hidden="true"></div><div class="edge-light right" aria-hidden="true"></div>
   <header class="masthead">
     <a class="brand" href="/" aria-label="Auctioneer pagrindinis puslapis"><span class="brand-mark">A<span>_</span></span><span>auctioneer<span class="brand-sub">PRIVATI ERDVĖ</span></span></a>
@@ -26,7 +28,7 @@
 
   <main id="loginView" class="login-layout">
     <section class="login-art" aria-label="Cyberpunk miesto iliustracija">
-      <img src="/vip/login-art.png" alt="Suaugusi cyberpunk personažė juodu paltu neoninio miesto fone" fetchpriority="high" width="1024" height="1536">
+      <img src="/vip/login-art.png?v=2" alt="Suaugusi cyberpunk personažė juodu paltu neoninio miesto fone" fetchpriority="high" width="1024" height="1536">
       <div class="art-shade"></div><div class="scanline" aria-hidden="true"></div>
       <div class="art-top mono"><span>AUCTIONEER / VIP</span><span class="outline-label">PRIVATI PRIEIGA</span></div>
       <div class="art-caption"><p class="eyebrow">KONTAKTAI. PASLAUGOS. ĮKAINIAI.</p><div class="art-title">Tavo ryšiai.<br><span>Tavo erdvė.</span></div><div class="neon-rule" aria-hidden="true"></div></div>
@@ -36,7 +38,7 @@
       <div class="login-form-wrap">
         <div class="terminal-kicker mono"><span class="cursor" aria-hidden="true">▌</span> AUTORIZACIJA</div>
         <h1>Privati<br><span>prieiga.</span></h1>
-        <p class="login-intro">Prisijunkite prie paslaugų ir kontaktų paieškos.</p>
+        <p class="login-intro">Prisijunkite prie paslaugų teikėjų ir darbdavių kontaktų paieškos.</p>
         <form id="loginForm">
           <label for="username">Vartotojo vardas</label>
           <input id="username" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" enterkeyhint="next" spellcheck="false" required maxlength="100" placeholder="Vartotojo vardas">
@@ -56,14 +58,18 @@
 
   <main id="appView" class="workspace" hidden>
     <section class="workspace-head">
-      <div><p class="eyebrow">VIP / KONTAKTŲ BAZĖ</p><h1>Paslaugų paieška<span class="cursor" aria-hidden="true">_</span></h1></div>
-      <div class="source-info"><span class="mono">ŠALTINIS</span><strong>rezultatai.xlsx</strong><span id="sourceCount">—</span></div>
+      <div><p class="eyebrow">VIP / KONTAKTŲ BAZĖ</p><h1><span id="workspaceTitle">Paslaugų paieška</span><span class="cursor" aria-hidden="true">_</span></h1></div>
+      <div class="source-info"><span class="mono">ŠALTINIS</span><strong id="sourceName">Paslaugų teikėjų bazė</strong><span id="sourceCount">—</span></div>
     </section>
+    <div id="nichePicker" class="niche-picker" role="group" aria-label="Pasirinkite kontaktų bazę">
+      <button type="button" class="niche-button" data-niche="services" aria-pressed="true"><span>Paslaugų teikėjai</span><span id="nicheCount-services" class="niche-count">—</span></button>
+      <button type="button" class="niche-button" data-niche="employers" aria-pressed="false"><span>Įmonės ieško darbininkų</span><span id="nicheCount-employers" class="niche-count">—</span></button>
+    </div>
     <section class="stats" aria-label="Duomenų apžvalga">
-      <div><span class="stat-label">Įrašai</span><strong id="statRecords">—</strong></div>
-      <div><span class="stat-label">Kategorijos</span><strong id="statCategories">—</strong></div>
+      <div><span id="statRecordsLabel" class="stat-label">Įrašai</span><strong id="statRecords">—</strong></div>
+      <div><span class="stat-label">Veiklos sritys</span><strong id="statCategories">—</strong></div>
       <div><span class="stat-label">Vietovės</span><strong id="statCities">—</strong></div>
-      <div><span class="stat-label">Su nurodyta kaina</span><strong id="statPriced">—</strong></div>
+      <div><span id="statFourthLabel" class="stat-label">Su nurodyta kaina</span><strong id="statPriced">—</strong></div>
     </section>
     <form id="searchForm" class="search-shell">
       <div class="search-bar"><span aria-hidden="true" class="search-symbol">⌕</span><label class="sr-only" for="q">Ieškoti visuose laukuose</label><input id="q" name="q" type="search" enterkeyhint="search" maxlength="300" placeholder="Vardas, įmonė, telefonas, paslauga arba bet kuri kita informacija…" autocomplete="off"><button class="primary" type="submit">Ieškoti <span aria-hidden="true">↗</span></button></div>
@@ -72,25 +78,26 @@
           <summary class="filter-summary"><span>Filtrai <span id="activeFilterCount" class="badge">0</span></span><span class="filter-chevron" aria-hidden="true">⌄</span></summary>
         <aside class="filters" aria-label="Paieškos filtrai">
           <div class="section-heading"><h2>Filtrai</h2><button class="text-button" id="resetFilters" type="button">Išvalyti</button></div>
-          <div class="filter-block"><label for="category">Paslaugos kategorija</label><select id="category" name="category"><option value="">Visos kategorijos</option></select></div>
-          <div class="filter-block"><span class="eyebrow">01 / TERITORIJA</span><label for="city">Miestas arba rajonas</label><select id="city" name="city"><option value="">Visos vietovės</option></select><label class="check-line" for="includeNationwide"><input id="includeNationwide" name="includeNationwide" type="checkbox"><span>Įtraukti dirbančius visoje Lietuvoje</span></label><label for="coverage">Nurodyta aptarnavimo zona</label><select id="coverage" name="coverage"><option value="">Visos zonos</option><option value="nationwide">Visa Lietuva</option><option value="30">+30 km aplink</option><option value="50">+50 km aplink</option><option value="100">+100 km aplink</option><option value="200">+200 km aplink</option></select><p class="field-note">Zona nurodyta šaltinyje. Atstumas iki jūsų neskaičiuojamas.</p></div>
-          <div class="filter-block"><span class="eyebrow">02 / ĮKAINIS</span><label for="unit">Kainos vienetas</label><select id="unit" name="unit"><option value="">Visi vienetai</option></select><div class="range-fields"><div><label for="minPrice">Nuo</label><input id="minPrice" name="minPrice" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></div><span aria-hidden="true">—</span><div><label for="maxPrice">Iki</label><input id="maxPrice" name="maxPrice" type="number" step="any" min="0" inputmode="decimal" placeholder="∞"></div></div></div>
-          <div class="filter-block"><span class="eyebrow">03 / DUOMENYS</span><label class="check-line" for="withPhone"><input id="withPhone" name="withPhone" type="checkbox"><span>Tik su telefonu</span></label><label class="check-line" for="withEmail"><input id="withEmail" name="withEmail" type="checkbox"><span>Tik su el. paštu</span></label><label class="check-line" for="withPrice"><input id="withPrice" name="withPrice" type="checkbox"><span>Tik su skaitine kaina</span></label></div>
+          <div class="filter-block"><label for="category">Veiklos sritis</label><select id="category" name="category"><option value="">Visos veiklos sritys</option></select></div>
+          <div class="filter-block"><span class="eyebrow">01 / TERITORIJA</span><label id="cityLabel" for="city">Miestas arba rajonas</label><select id="city" name="city"><option value="">Visos vietovės</option></select><div data-services-only><label class="check-line" for="includeNationwide"><input id="includeNationwide" name="includeNationwide" type="checkbox"><span>Įtraukti dirbančius visoje Lietuvoje</span></label><label for="coverage">Nurodyta aptarnavimo zona</label><select id="coverage" name="coverage"><option value="">Visos zonos</option><option value="nationwide">Visa Lietuva</option><option value="30">+30 km aplink</option><option value="50">+50 km aplink</option><option value="100">+100 km aplink</option><option value="200">+200 km aplink</option></select><p class="field-note">Zona nurodyta šaltinyje. Atstumas iki jūsų neskaičiuojamas.</p></div></div>
+          <div class="filter-block" data-services-only><span class="eyebrow">02 / ĮKAINIS</span><label for="unit">Kainos vienetas</label><select id="unit" name="unit"><option value="">Visi vienetai</option></select><div class="range-fields"><div><label for="minPrice">Nuo</label><input id="minPrice" name="minPrice" type="number" step="any" min="0" inputmode="decimal" placeholder="0"></div><span aria-hidden="true">—</span><div><label for="maxPrice">Iki</label><input id="maxPrice" name="maxPrice" type="number" step="any" min="0" inputmode="decimal" placeholder="∞"></div></div></div>
+          <div id="employerFilters" class="filter-block" hidden><span class="eyebrow">02 / DARBDAVYS</span><label for="employerType">Darbdavio tipas</label><select id="employerType" name="employerType"><option value="">Visi tipai</option></select><label for="contactStatus">Kontaktų būsena</label><select id="contactStatus" name="contactStatus"><option value="">Visos būsenos</option></select><label for="portal">Skelbimų portalas</label><select id="portal" name="portal"><option value="">Visi portalai</option></select></div>
+          <div class="filter-block"><span class="eyebrow">03 / DUOMENYS</span><label class="check-line" for="withPhone"><input id="withPhone" name="withPhone" type="checkbox"><span>Tik su telefonu</span></label><label class="check-line" for="withEmail"><input id="withEmail" name="withEmail" type="checkbox"><span>Tik su el. paštu</span></label><label class="check-line" for="withPrice" data-services-only><input id="withPrice" name="withPrice" type="checkbox"><span>Tik su skaitine kaina</span></label></div>
           <button id="showResults" class="primary mobile-filter-action" type="button">Rodyti rezultatus <span id="mobileResultCount">—</span></button>
         </aside>
         </details>
         <section class="results-column" aria-label="Paieškos rezultatai">
-          <details class="advanced"><summary><span><span class="mono">＋</span> Visų 19 laukų filtrai</span><span id="ruleCount" class="badge">0</span></summary><div class="advanced-body"><div class="advanced-top"><label for="ruleMode">Filtrų derinimas</label><select id="ruleMode"><option value="all">Atitinka visus filtrus (IR)</option><option value="any">Atitinka bent vieną (ARBA)</option></select></div><div id="rules"></div><button id="addRule" class="subtle" type="button">＋ Pridėti lauką</button><p class="field-note">Galite filtruoti kiekvieną originalaus failo lauką. Įmonės žyma faile visur yra 0, todėl ji nepatvirtina teikėjo teisinės formos.</p></div></details>
+          <details class="advanced"><summary><span><span class="mono">＋</span> <span id="advancedLabel">Visų laukų filtrai</span></span><span id="ruleCount" class="badge">0</span></summary><div class="advanced-body"><div class="advanced-top"><label for="ruleMode">Filtrų derinimas</label><select id="ruleMode"><option value="all">Atitinka visus filtrus (IR)</option><option value="any">Atitinka bent vieną (ARBA)</option></select></div><div id="rules"></div><button id="addRule" class="subtle" type="button">＋ Pridėti lauką</button><p id="advancedNote" class="field-note">Filtruokite visus pateiktus duomenų laukus.</p></div></details>
           <div id="resultsToolbar" class="results-toolbar" tabindex="-1"><div class="result-count" role="status" aria-live="polite" aria-atomic="true"><strong id="resultCount">—</strong><span>rezultatų</span><span class="loading-indicator" id="loading" hidden>Ieškoma…</span></div><div class="sort-control"><label for="sort">Rikiuoti</label><select id="sort" name="sort"><option value="price_asc">Kaina: nuo mažiausios</option><option value="price_desc">Kaina: nuo didžiausios</option><option value="name_asc">Pavadinimas: A–Ž</option><option value="name_desc">Pavadinimas: Ž–A</option><option value="rating_desc">Geriausias įvertinimas</option><option value="reviews_desc">Daugiausia atsiliepimų</option><option value="experience_desc">Didžiausia patirtis</option><option value="city_asc">Teritorija: A–Ž</option></select></div></div>
           <div id="unitNotice" class="notice" hidden><span aria-hidden="true">!</span><p>Rezultatuose yra skirtingų kainos vienetų. Tiesioginiam palyginimui pasirinkite vienetą. Įrašai be kainos rikiuojami gale.</p></div>
           <div id="searchError" class="error-banner" role="alert" hidden></div>
           <div id="emptyState" class="empty-state" hidden><span class="empty-symbol" aria-hidden="true">⌕</span><h2>Rezultatų nerasta</h2><p>Pabandykite platesnę teritoriją arba mažiau filtrų.</p><button id="emptyReset" class="subtle" type="button">Išvalyti filtrus</button></div>
-          <div id="resultsTable" class="table-wrap"><table><thead><tr><th>Paslaugos teikėjas</th><th>Teritorija</th><th>Telefonas</th><th class="price-col">Įkainis</th><th>Įvertinimas</th><th><span class="sr-only">Veiksmai</span></th></tr></thead><tbody id="resultsBody"></tbody></table></div>
+          <div id="resultsTable" class="table-wrap"><table><thead><tr id="resultsHead"><th>Paslaugos teikėjas</th><th>Teritorija</th><th>Telefonas</th><th class="price-col">Įkainis</th><th>Įvertinimas</th><th><span class="sr-only">Veiksmai</span></th></tr></thead><tbody id="resultsBody"></tbody></table></div>
           <footer class="pagination"><div class="page-size"><label for="pageSize">Rodyti</label><select id="pageSize" name="pageSize"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></div><span id="pageInfo" class="mono">—</span><div><button id="previousPage" class="subtle" type="button" aria-label="Ankstesnis puslapis">←</button><button id="nextPage" class="subtle" type="button" aria-label="Kitas puslapis">→</button></div></footer>
         </section>
       </div>
     </form>
-    <footer class="workspace-footer"><span class="mono">AUCTIONEER / VIP</span><span>Rodomi pateikto failo duomenys. Trūkstamos reikšmės pažymėtos.</span></footer>
+    <footer class="workspace-footer"><span class="mono">AUCTIONEER / VIP</span><span>Rodomi pasirinktos kontaktų bazės duomenys. Trūkstamos reikšmės pažymėtos.</span></footer>
   </main>
 
   <dialog id="detailDialog" aria-labelledby="detailTitle"><div class="dialog-top"><span class="eyebrow">ĮRAŠO INFORMACIJA</span><button id="closeDetail" class="subtle" type="button" autofocus aria-label="Uždaryti įrašą">✕</button></div><div id="detailContent"></div></dialog>

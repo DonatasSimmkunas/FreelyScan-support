@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCatalog,FIELDS} from '../lib/catalog.mjs';
+import {createCatalog,FIELDS,cleanCategory} from '../lib/catalog.mjs';
 const base=Object.fromEntries(FIELDS.map(f=>[f.key,null]));
 const data=[
   {...base,id:1,provider:'Žilvinas',category:'Stogai',price_raw:'10 €/h',price_value:10,price_unit:'€/h',city_area:'Vilnius, +30 km aplink',company_phone:'+370 612 34567',rating:5,reviews:20,experience_years:9,is_business:0},
@@ -44,4 +44,20 @@ test('numeric sort and pagination remain stable, nulls last',()=>{
   assert.equal(many.search({page:999}).page,3);
   assert.equal(many.search({page:'nonsense'}).page,1);
   assert.deepEqual(catalog.search({sort:'rating_desc'}).records.map(r=>r.id),[1,2,4,3]);
+});
+test('category noise is suppressed without removing records or changing meaningful categories',()=>{
+  const original=[...['2026-09-01','2026/09/01','Paslaugos kategorija',' ',null,'Stogai'].map((category,i)=>({...data[0],id:i+1,category}))];
+  const cleaned=createCatalog(original);
+  assert.equal(cleaned.metadata.total,6);assert.deepEqual(cleaned.metadata.categories,['Stogai']);
+  assert.equal(cleaned.search().records.filter(r=>r.category===null).length,5);
+  assert.equal(original[0].category,'2026-09-01');
+  assert.equal(cleanCategory('  Vidaus apdailos darbai  '),'Vidaus apdailos darbai');
+  assert.equal(cleaned.search({q:'2026-09-01'}).total,0);
+});
+test('territory options contain only matches under the other active filters',()=>{
+  assert.deepEqual(catalog.search({q:'azuolas'}).availableCities,['Kaunas']);
+  assert.deepEqual(catalog.search({city:'Vilnius',withEmail:true}).availableCities,['Kaunas']);
+  assert.equal(catalog.search({city:'Vilnius',withEmail:true}).total,0);
+  assert.deepEqual(catalog.search({q:'not-present'}).availableCities,[]);
+  assert.deepEqual(catalog.search({city:'Vilnius',withEmail:true,includeNationwide:true}).availableCities,['Kaunas','Vilnius']);
 });

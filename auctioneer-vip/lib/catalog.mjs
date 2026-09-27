@@ -1,6 +1,6 @@
 export const FIELDS = [
   ['id','Įrašo ID','number'],['page','Šaltinio puslapis','number'],
-  ['provider','Vardas arba įmonė','text'],['category','Paslaugos kategorija','text'],
+  ['provider','Vardas arba įmonė','text'],['category','Veiklos sritis','text'],
   ['price_raw','Originalus įkainis','text'],['price_value','Kaina','number'],
   ['price_unit','Kainos vienetas','text'],['city_area','Teritorija (originali)','text'],
   ['rating','Įvertinimas','number'],['reviews','Atsiliepimų skaičius','number'],
@@ -11,18 +11,26 @@ export const FIELDS = [
   ['contact_source_url','Kontaktų šaltinio nuoroda','text']
 ].map(([key,label,type])=>({key,label,type}));
 export const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('lt').trim();
+export function cleanCategory(value){
+  const text=String(value??'').trim();
+  if(!text||/^(?:\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4})(?:[T\s].*)?$/.test(text)||/^\d+(?:[.,]\d+)?$/.test(text))return null;
+  if(new Set(['paslaugos kategorija','kategorija','category','n/a','none','null','undefined','-','—','kategorija nenurodyta','(tuscia)']).has(normalize(text)))return null;
+  return text;
+}
 const absent = value => value === null || value === undefined || value === '';
 const numeric = value => typeof value === 'number' && Number.isFinite(value);
 const collator = new Intl.Collator('lt', {numeric:true,sensitivity:'base'});
 const OPS = new Set(['contains','not_contains','eq','neq','gte','lte','missing','present']);
 const safeNum = (value, name) => { if(absent(value)) return null; const n=Number(value); if(!Number.isFinite(n)) throw new Error(`Neteisingas skaičius: ${name}`); return n; };
 export function createCatalog(records) {
+  // Remove misclassified dates and labels from presentation without deleting contacts.
+  records=records.map(record=>({...record,category:cleanCategory(record.category)}));
   const entries=records.map(record=>({record,city:String(record.city_area||'').split(',')[0].trim(),
     nationwide:normalize(record.city_area).includes('visa lietuva'),radius:Number(String(record.city_area||'').match(/\+(\d+)\s*km/)?.[1]||0),
     index:normalize(Object.values(record).join(' '))}));
   const distinct = key=>[...new Set(records.map(r=>r[key]).filter(v=>!absent(v)))].sort((a,b)=>collator.compare(String(a),String(b)));
   const metadata={total:records.length,source:'rezultatai.xlsx',fields:FIELDS,categories:distinct('category'),units:distinct('price_unit'),
-    cities:[...new Set(entries.map(e=>e.city))].sort(collator.compare),
+    cities:[...new Set(entries.map(e=>e.city).filter(Boolean))].sort(collator.compare),
     missingPrice:records.filter(r=>!numeric(r.price_value)).length,missingPhone:records.filter(r=>absent(r.company_phone)).length,
     missingEmail:records.filter(r=>absent(r.company_email)).length,
     businessFlagReliable:records.some(r=>r.is_business===1),
@@ -52,9 +60,8 @@ export function createCatalog(records) {
       }
     };
     const tokens=q.split(/\s+/).filter(Boolean);
-    let matching=entries.filter(e=>tokens.every(t=>e.index.includes(t))
+    const candidates=entries.filter(e=>tokens.every(t=>e.index.includes(t))
       && (!category||(category==='__missing__'?absent(e.record.category):e.record.category===category))
-      && (!city||e.city===city||(input.includeNationwide===true&&e.nationwide))
       && (!unit||(unit==='__missing__'?absent(e.record.price_unit):e.record.price_unit===unit))
       && (!input.coverage||(input.coverage==='nationwide'?e.nationwide:input.coverage==='radius'?e.radius>0:e.radius===Number(input.coverage)))
       && (min===null||(numeric(e.record.price_value)&&e.record.price_value>=min))
@@ -63,6 +70,9 @@ export function createCatalog(records) {
       && (!input.withEmail||!absent(e.record.company_email))
       && (!input.withPrice||numeric(e.record.price_value))
       && (!rules.length||(input.ruleMode==='any'?rules.some(r=>matchRule(e.record,r)):rules.every(r=>matchRule(e.record,r)))));
+    const availableCities=input.includeNationwide===true&&candidates.some(e=>e.nationwide)
+      ?metadata.cities:[...new Set(candidates.map(e=>e.city).filter(Boolean))].sort(collator.compare);
+    let matching=candidates.filter(e=>!city||e.city===city||(input.includeNationwide===true&&e.nationwide));
     const allowedSorts=new Set(['price_asc','price_desc','name_asc','name_desc','rating_desc','reviews_desc','experience_desc','city_asc']);
     const sort=allowedSorts.has(input.sort)?input.sort:'price_asc';
     const [kind,dir]=sort.split('_');
@@ -78,7 +88,7 @@ export function createCatalog(records) {
     const requestedPage=Number(input.page);
     const page=Math.max(1,Math.min(pages,Number.isFinite(requestedPage)?Math.floor(requestedPage):1));
     const units=[...new Set(matching.map(e=>e.record.price_unit).filter(v=>!absent(v)))];
-    return {total:matching.length,page,pages,pageSize,sort,mixedUnits:units.length>1,units,
+    return {total:matching.length,page,pages,pageSize,sort,mixedUnits:units.length>1,units,availableCities,
       missingPrice:matching.filter(e=>!numeric(e.record.price_value)).length,
       records:matching.slice((page-1)*pageSize,page*pageSize).map(e=>e.record)};
   }

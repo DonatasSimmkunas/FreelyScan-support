@@ -153,6 +153,11 @@ h1,h2,h3,h4,.brand,.panelTabs button,.toolBtn,button{font-family:var(--font-disp
     <input class="authField" id="authEmail" type="email" autocomplete="email" placeholder="vardas@example.com">
     <div id="authState" class="authState" style="display:none"></div>
     <div class="row"><button onclick="closeAuth()" id="authCancel">Atšaukti</button><button class="primary" onclick="sendMagicLink()" id="authSend">Siųsti nuorodą</button></div>
+    <div style="border-top:1px solid #dce7ec;margin-top:16px;padding-top:14px">
+      <p id="authPasteInfo" style="margin:0 0 8px"></p>
+      <input class="authField" id="authLink" type="url" autocomplete="off" spellcheck="false" style="width:100%" aria-label="Email confirmation link">
+      <div class="row"><button class="primary" onclick="confirmEmailLink()" id="authConfirmLink"></button></div>
+    </div>
   </div>
   <div id="authSignedIn" style="display:none">
     <div class="authState" id="authUserInfo"></div>
@@ -562,7 +567,8 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       projects: 'Debesies projektai', signIn: 'Prisijungti', account: 'Paskyra',
       authTitle: 'Sign in to VENT IT', authInfo: 'Įvesk el. paštą. Atsiųsime vienkartinę prisijungimo nuorodą.',
       emailPlaceholder: 'vardas@example.com', cancel: 'Atšaukti', send: 'Siųsti nuorodą', close: 'Uždaryti', signOut: 'Atsijungti',
-      signedIn: 'Prisijungta kaip', linkSent: 'Prisijungimo nuoroda išsiųsta. Patikrink el. paštą.',
+      signedIn: 'Prisijungta kaip', linkSent: 'Nuoroda išsiųsta. Jei atidaryta nuoroda neveikia, nukopijuok jos adresą iš laiško ir įklijuok žemiau.',
+      pasteInfo: 'Neveikia laiško nuoroda? Ant „Confirm email address“ spausk dešinį klavišą (telefone palaikyk) → „Kopijuoti nuorodos adresą“ ir įklijuok čia. Nuorodos niekam nesiųsk.', pastePlaceholder: 'Įklijuok visą laiško nuorodą', confirmLink: 'Patvirtinti nuorodą', invalidLink: 'Įklijuok visą nuorodą iš VENT IT prisijungimo laiško.', expiredLink: 'Nuoroda nebegalioja arba jau panaudota. Išsiųsk naują ir nukopijuok jos adresą jos neatidarydamas.',
       authMissing: 'Supabase aplinkos kintamieji nesukonfigūruoti.', authError: 'Prisijungimo klaida',
       empty: 'Dar nėra išsaugotų projektų.', loginToSee: 'Prisijunk, kad matytum projektus.',
       cloudSaved: 'Projektas išsaugotas debesyje.', cloudLoaded: 'Projektas užkrautas iš Supabase.',
@@ -574,7 +580,8 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       projects: 'Skyprosjekter', signIn: 'Logg inn', account: 'Konto',
       authTitle: 'Logg inn på VENT IT', authInfo: 'Skriv inn e-postadressen din. Vi sender en engangslenke for innlogging.',
       emailPlaceholder: 'navn@eksempel.no', cancel: 'Avbryt', send: 'Send lenke', close: 'Lukk', signOut: 'Logg ut',
-      signedIn: 'Innlogget som', linkSent: 'Innloggingslenken er sendt. Sjekk e-posten din.',
+      signedIn: 'Innlogget som', linkSent: 'Lenken er sendt. Hvis den ikke åpnes, kopier lenkeadressen fra e-posten og lim den inn nedenfor.',
+      pasteInfo: 'Virker ikke e-postlenken? Høyreklikk på «Confirm email address» (hold inne på mobil), kopier lenkeadressen og lim den inn her. Ikke del lenken.', pastePlaceholder: 'Lim inn hele e-postlenken', confirmLink: 'Bekreft lenken', invalidLink: 'Lim inn hele lenken fra VENT IT-e-posten.', expiredLink: 'Lenken er utløpt eller brukt. Send en ny og kopier adressen uten å åpne den.',
       authMissing: 'Supabase-miljøvariabler er ikke konfigurert.', authError: 'Innloggingsfeil',
       empty: 'Ingen lagrede prosjekter ennå.', loginToSee: 'Logg inn for å se prosjektene dine.',
       cloudSaved: 'Prosjektet er lagret i skyen.', cloudLoaded: 'Prosjektet er lastet fra Supabase.',
@@ -586,7 +593,8 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       projects: 'Cloud projects', signIn: 'Sign in', account: 'Account',
       authTitle: 'Sign in to VENT IT', authInfo: 'Enter your email. We will send a one-time sign-in link.',
       emailPlaceholder: 'name@example.com', cancel: 'Cancel', send: 'Send link', close: 'Close', signOut: 'Sign out',
-      signedIn: 'Signed in as', linkSent: 'Sign-in link sent. Check your email.',
+      signedIn: 'Signed in as', linkSent: 'Link sent. If opening it fails, copy its address from the email and paste it below.',
+      pasteInfo: 'Email link not working? Right-click “Confirm email address” (press and hold on mobile), copy the link address, and paste it here. Do not share this link.', pastePlaceholder: 'Paste the complete email link', confirmLink: 'Confirm link', invalidLink: 'Paste the complete link from the VENT IT email.', expiredLink: 'The link has expired or was already used. Send a new one and copy its address without opening it.',
       authMissing: 'Supabase environment variables are not configured.', authError: 'Authentication error',
       empty: 'No saved projects yet.', loginToSee: 'Sign in to see your projects.',
       cloudSaved: 'Project saved to the cloud.', cloudLoaded: 'Project loaded from Supabase.',
@@ -629,7 +637,7 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
 
     const ids = {
       authTitle: 'authTitle', authInfo: 'authInfo', authCancel: 'cancel', authSend: 'send',
-      authClose: 'close', authSignOut: 'signOut'
+      authClose: 'close', authSignOut: 'signOut', authPasteInfo: 'pasteInfo', authConfirmLink: 'confirmLink'
     };
     for (const [id, key] of Object.entries(ids)) {
       const el = document.getElementById(id);
@@ -637,6 +645,8 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
     }
     const email = document.getElementById('authEmail');
     if (email) email.placeholder = c('emailPlaceholder');
+    const link = document.getElementById('authLink');
+    if (link) link.placeholder = c('pastePlaceholder');
     const info = document.getElementById('authUserInfo');
     if (info && session) info.textContent = `${c('signedIn')} ${session.user.email || ''}`;
   }
@@ -831,6 +841,42 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       showAuthState(`${c('authError')}: ${e.message || e}`, true);
     } finally {
       if (sendBtn) sendBtn.disabled = false;
+    }
+  };
+
+  window.confirmEmailLink = async function() {
+    if (!sb) { showAuthState(c('authMissing'), true); return; }
+    const input = document.getElementById('authLink');
+    const button = document.getElementById('authConfirmLink');
+    try {
+      let link = new URL(input?.value?.trim() || '');
+      // Outlook may wrap the original confirmation link in Safe Links.
+      if (link.hostname.toLowerCase().endsWith('.safelinks.protection.outlook.com')) {
+        link = new URL(link.searchParams.get('url') || '');
+      }
+      const authHost = new URL(getConfig().supabaseUrl).hostname.toLowerCase();
+      const type = link.searchParams.get('type');
+      const tokenHash = link.searchParams.get('token') || link.searchParams.get('token_hash');
+      if (link.protocol !== 'https:' || link.hostname.toLowerCase() !== authHost || link.pathname !== '/auth/v1/verify' || !['email','signup','magiclink'].includes(type) || !tokenHash || !/^[A-Za-z0-9_-]{16,512}$/.test(tokenHash)) throw new Error(c('invalidLink'));
+      if (button) button.disabled = true;
+      const { data, error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type });
+      if (error) throw error;
+      if (!data?.session) throw new Error(c('expiredLink'));
+      input.value = '';
+      session = data.session;
+      closeAuth();
+      renderCloudChrome();
+      await refreshProjects();
+      if (state.recognition?.pendingAuth && state.recognition.floorId === state.selectedFloorId) {
+        state.recognition.pendingAuth = false;
+        saveSilent();
+        recognize();
+      }
+    } catch (e) {
+      // The one-time URL and token must never be logged or retained.
+      showAuthState(e.message === c('invalidLink') ? c('invalidLink') : c('expiredLink'), true);
+    } finally {
+      if (button) button.disabled = false;
     }
   };
 

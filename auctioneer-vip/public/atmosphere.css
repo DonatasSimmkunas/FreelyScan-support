@@ -1,4 +1,4 @@
-/* Decorative atmosphere stays above the body paint and below all page content. */
+/* The isolated body paints these decorative layers above its background, below content. */
 body{isolation:isolate}
 #ambientBackground{
   position:fixed;
@@ -7,207 +7,193 @@ body{isolation:isolate}
   overflow:hidden;
   pointer-events:none;
   contain:strict;
-  background:
-    radial-gradient(ellipse at 100% 12%,#845ac71a 0,transparent 48%),
-    radial-gradient(ellipse at 4% 88%,#81b93615 0,transparent 48%);
+  background:radial-gradient(ellipse at 100% 12%,#845ac71a,transparent 48%),radial-gradient(ellipse at 4% 88%,#81b93615,transparent 48%);
 }
-#ambientBackground i,#ambientBackground::before,#ambientBackground::after{
-  position:absolute;
-  display:block;
-  pointer-events:none;
+#ambientBackground i,#ambientBackground::before,#ambientBackground::after{position:absolute;display:block;pointer-events:none}
+#ambientBackground .ambient-photo,#ambientBackground .ambient-scrim{display:none}
+body:not(.login-mode) #ambientBackground .ambient-photo,
+body:not(.login-mode) #ambientBackground .ambient-scrim{display:block}
+.ambient-photo{inset:-3%;z-index:0;background-size:cover;background-repeat:no-repeat;isolation:isolate}
+body:not(.login-mode) .photo-city{
+  --photo-x:50%;--photo-y:45%;
+  background-image:url('/vip/workspace-city.webp');
+  background-position:var(--photo-x) var(--photo-y);
+  opacity:1;
+  animation:ambient-city-drift 40s ease-in-out infinite alternate;
+}
+body:not(.login-mode) .photo-portrait{
+  --photo-x:65%;--photo-y:50%;
+  background-image:url('/vip/workspace-portrait.webp');
+  background-position:var(--photo-x) var(--photo-y);
+  opacity:0;
+  animation:ambient-photo-crossfade 40s ease-in-out infinite;
+}
+/* Glows use the photographs' cover size and focal point, so building lights stay
+   attached to their buildings while the image drifts or is cropped on a phone. */
+.ambient-photo::before,.ambient-photo::after{
+  content:"";position:absolute;left:var(--photo-x);top:var(--photo-y);
+  width:max(100%,188.4vh);aspect-ratio:1672/941;
+  transform:translate(calc(0% - var(--photo-x)),calc(0% - var(--photo-y)));
+  pointer-events:none;mix-blend-mode:screen;opacity:0;
+  animation:ambient-building-glow 13s ease-in-out -2s infinite;
+}
+.photo-city::before{
+  background:
+    radial-gradient(ellipse .5% 19% at 6% 21%,#bfff579e,transparent 75%),
+    radial-gradient(ellipse .4% 23% at 14% 33%,#c1ff4a8c,transparent 75%),
+    radial-gradient(ellipse .55% 32% at 34% 34%,#bdff528f,transparent 75%),
+    radial-gradient(ellipse .4% 25% at 61% 25%,#c1ff4aa6,transparent 75%),
+    radial-gradient(ellipse .5% 26% at 79% 38%,#d2ff7f8c,transparent 75%),
+    radial-gradient(ellipse .45% 24% at 88% 30%,#c1ff4a8c,transparent 75%);
+}
+.photo-city::after{
+  background:
+    radial-gradient(ellipse .6% 21% at 6% 21%,#be83ffa6,transparent 75%),
+    radial-gradient(ellipse .55% 25% at 14% 33%,#b47affa6,transparent 75%),
+    radial-gradient(ellipse .5% 32% at 34% 34%,#c6a0ffa6,transparent 75%),
+    radial-gradient(ellipse .5% 27% at 61% 25%,#b47aff99,transparent 75%),
+    radial-gradient(ellipse .6% 28% at 79% 38%,#c292ffa6,transparent 75%),
+    radial-gradient(ellipse .6% 26% at 88% 30%,#b47affa6,transparent 75%);
+  animation-duration:17s;animation-delay:-10s;
+}
+.photo-portrait::before{
+  background:
+    radial-gradient(ellipse .45% 23% at 15% 33%,#c1ff4a99,transparent 75%),
+    radial-gradient(ellipse .5% 28% at 29% 39%,#c1ff4a99,transparent 75%),
+    radial-gradient(ellipse .4% 27% at 49% 37%,#c1ff4a99,transparent 75%),
+    radial-gradient(ellipse .45% 28% at 62% 30%,#d2ff7499,transparent 75%),
+    radial-gradient(ellipse .55% 13% at 88% 8%,#c1ff4a99,transparent 75%);
+  animation-duration:19s;animation-delay:-4s;
+}
+.photo-portrait::after{
+  background:
+    radial-gradient(ellipse .6% 25% at 15% 33%,#c08effa6,transparent 75%),
+    radial-gradient(ellipse .55% 29% at 29% 39%,#b47affa6,transparent 75%),
+    radial-gradient(ellipse .55% 28% at 49% 37%,#c08effa6,transparent 75%),
+    radial-gradient(ellipse .55% 29% at 62% 30%,#b47affa6,transparent 75%),
+    radial-gradient(ellipse .6% 14% at 88% 8%,#c08effa6,transparent 75%);
+  animation-duration:23s;animation-delay:-14s;
+}
+.ambient-scrim{
+  inset:0;
+  z-index:1;
+  background:linear-gradient(180deg,#05090b45 0%,#07100e73 52%,#05090b9c 100%),linear-gradient(90deg,#090c0d26,#090c0d55 40%,#090c0d20);
 }
 #ambientBackground::before{
   content:"";
   inset:0;
   z-index:2;
-  background:radial-gradient(ellipse at 55% 43%,#090c0d80 0,transparent 75%);
+  background:radial-gradient(ellipse at 55% 43%,#090c0d42,transparent 75%);
 }
 #ambientBackground::after{
   content:"";
-  left:0;
-  right:0;
-  top:12%;
-  height:1px;
-  background:linear-gradient(90deg,transparent 12%,#c1ff4a16 42%,#b798ef36 80%,transparent);
-  animation:ambient-scan 26s ease-in-out infinite alternate;
+  left:0;right:0;top:12%;height:2px;z-index:4;
+  background:linear-gradient(90deg,transparent 12%,#c1ff4a2b 42%,#b798ef50 80%,transparent);
+  animation:ambient-scan 24s ease-in-out infinite alternate;
 }
+.ambient-motion{z-index:3}
 .ambient-grid{
   inset:-64px;
-  background-image:
-    linear-gradient(#b798ef0d 1px,transparent 1px),
-    linear-gradient(90deg,#c1ff4a0e 1px,transparent 1px);
+  background-image:linear-gradient(#b798ef10 1px,transparent 1px),linear-gradient(90deg,#c1ff4a12 1px,transparent 1px);
   background-size:64px 64px;
   -webkit-mask-image:linear-gradient(130deg,#000,transparent 54%,#000);
   mask-image:linear-gradient(130deg,#000,transparent 54%,#000);
   animation:ambient-grid-drift 28s linear infinite;
 }
-.ambient-orbit{
-  width:360px;
-  height:360px;
-  border:1px solid #c1ff4a23;
-  border-radius:36px;
-  transform:rotate(34deg);
+.ambient-orbit{width:360px;height:360px;border:1px solid #c1ff4a38;border-radius:36px;transform:rotate(34deg)}
+.ambient-orbit::before,.ambient-orbit::after{content:"";position:absolute;inset:15px;border:1px solid #c1ff4a16;border-radius:25px}
+.ambient-orbit::after{inset:-1px;border-color:transparent;border-top-color:#c1ff4a85;border-radius:36px;width:72px}
+.orbit-a{right:-155px;top:18%;animation:ambient-orbit-a 24s ease-in-out infinite alternate}
+.orbit-b{left:-220px;bottom:-120px;width:480px;height:480px;border-color:#b798ef45;animation:ambient-orbit-b 30s ease-in-out infinite alternate}
+.orbit-b::before{border-color:#b798ef20}.orbit-b::after{border-top-color:#b798ef85}
+.ambient-beam{width:3px;height:420px;background:linear-gradient(transparent,#c1ff4a70,transparent);transform:rotate(32deg)}
+.beam-a{right:11%;top:-90px;animation:ambient-beam-a 18s ease-in-out infinite alternate}
+.beam-b{left:17%;bottom:-160px;height:530px;background:linear-gradient(transparent,#b798ef70,transparent);animation:ambient-beam-b 22s ease-in-out infinite alternate}
+.ambient-spark{width:54px;height:3px;background:#c1ff4aa6;box-shadow:0 0 15px #c1ff4a60}
+.ambient-spark::after{content:"";position:absolute;top:-7px;left:9px;width:2px;height:18px;background:inherit}
+.spark-a{right:5%;top:62%;animation:ambient-lamp 13s ease-in-out -3s infinite}
+.spark-b{left:4%;top:26%;width:38px;background:#b798efa6;box-shadow:0 0 15px #b798ef60;animation:ambient-lamp 16s ease-in-out -8s infinite}
+.ambient-rain{
+  --rain-step:190px;
+  inset:-240px -80px;
+  opacity:.32;
+  background-image:linear-gradient(106deg,transparent 46%,#d7ebec4d 49%,transparent 51%);
+  background-size:173px 190px;
+  animation:ambient-rain-fall 13s linear infinite;
 }
-.ambient-orbit::before,.ambient-orbit::after{
-  content:"";
-  position:absolute;
-  inset:15px;
-  border:1px solid #c1ff4a0e;
-  border-radius:25px;
+.rain-b{--rain-step:280px;opacity:.2;background-size:251px 280px;animation-duration:19s;animation-delay:-9s}
+.ambient-particles{
+  inset:-100px;
+  background-image:radial-gradient(circle,#d8ffacaa 0 1px,transparent 2px),radial-gradient(circle,#c0a0ec80 0 1.5px,transparent 3px),radial-gradient(circle,#d8f9f780 0 1px,transparent 2px);
+  background-position:17px 24px,91px 146px,213px 64px;
+  background-size:263px 239px,367px 311px,421px 293px;
+  animation:ambient-particles-rise 28s ease-in-out infinite;
 }
-.ambient-orbit::after{
-  inset:-1px;
-  border-color:transparent;
-  border-top-color:#c1ff4a70;
-  border-radius:36px;
-  width:72px;
+.particles-b{background-position:111px 72px,23px 91px,43px 168px;background-size:401px 313px,503px 417px,353px 401px;animation-duration:34s;animation-delay:-17s}
+.ambient-sweep{
+  top:-15%;left:-45%;width:34%;height:130%;
+  background:linear-gradient(90deg,transparent,#c1ff4a0d 38%,#daffd122 50%,#b798ef12 62%,transparent);
+  transform:rotate(-18deg);
+  animation:ambient-sweep 26s ease-in-out infinite;
 }
-.orbit-a{
-  right:-155px;
-  top:18%;
-  animation:ambient-orbit-a 24s ease-in-out infinite alternate;
+/* Oversized tubes breathe all the way off and on; there are no abrupt brightness steps. */
+.edge-light{top:14%;width:24px;height:65vh;max-height:none;border-radius:999px;opacity:0;z-index:2;animation:ambient-lamp 12s ease-in-out -2s infinite}
+.edge-light.left{left:0;background:linear-gradient(90deg,#658926,#bdff55 22%,#f6ffdc 48%,#c1ff4a 73%,#6c9829);box-shadow:0 0 18px #c1ff4ab3,0 0 48px #a6e74670,0 0 85px #95d13638}
+.edge-light.right{right:0;top:22%;background:linear-gradient(90deg,#604681,#bf98f5 22%,#f3eaff 48%,#c5a0ff 73%,#8060aa);box-shadow:0 0 18px #c5a0ffb3,0 0 48px #a175df70,0 0 85px #9260ca38;animation-duration:15s;animation-delay:-8s}
+.edge-light::after{content:"";position:absolute;top:calc(100% + 22px);left:0;width:100%;height:52px;border-radius:inherit;background:inherit;box-shadow:inherit}
+/* Keep the large lights behind search controls and result text after login. */
+body:not(.login-mode) .edge-light{z-index:-1}
+.neon-rule{animation:ambient-lamp 12s ease-in-out -2s infinite}
+body:not(.login-mode) #appView :is(.workspace-head,.results-toolbar,.pagination,.workspace-footer){text-shadow:0 1px 5px #000,0 0 14px #000b}
+#appView #searchForm[aria-busy=true]{opacity:1}
+#appView .error-banner{background:#241318f2}
+@keyframes ambient-city-drift{
+  from{transform:translate3d(-.7%,0,0) scale(1.02)}
+  to{transform:translate3d(.7%,-.5%,0) scale(1.08)}
 }
-.orbit-b{
-  left:-220px;
-  bottom:-120px;
-  width:480px;
-  height:480px;
-  border-color:#b798ef2c;
-  animation:ambient-orbit-b 30s ease-in-out infinite alternate;
+@keyframes ambient-photo-crossfade{
+  0%,12%{opacity:0;transform:translate3d(.7%,0,0) scale(1.03)}
+  42%,62%{opacity:1;transform:translate3d(0,-.5%,0) scale(1.07)}
+  92%,100%{opacity:0;transform:translate3d(-.7%,0,0) scale(1.1)}
 }
-.orbit-b::before{border-color:#b798ef10}
-.orbit-b::after{border-top-color:#b798ef60}
-.ambient-beam{
-  width:1px;
-  height:320px;
-  background:linear-gradient(transparent,#c1ff4a4a,transparent);
-  transform:rotate(32deg);
-}
-.beam-a{
-  right:11%;
-  top:-90px;
-  animation:ambient-beam-a 18s ease-in-out infinite alternate;
-}
-.beam-b{
-  left:17%;
-  bottom:-160px;
-  height:450px;
-  background:linear-gradient(transparent,#b798ef4a,transparent);
-  animation:ambient-beam-b 22s ease-in-out infinite alternate;
-}
-.ambient-spark{
-  width:36px;
-  height:2px;
-  background:#c1ff4a8c;
-  box-shadow:0 0 12px #c1ff4a3d;
-}
-.ambient-spark::after{
-  content:"";
-  position:absolute;
-  top:-5px;
-  left:7px;
-  width:1px;
-  height:12px;
-  background:inherit;
-}
-.spark-a{
-  right:5%;
-  top:62%;
-  animation:ambient-lamp 12s steps(1,end) infinite;
-}
-.spark-b{
-  left:4%;
-  top:26%;
-  width:22px;
-  background:#b798ef80;
-  box-shadow:0 0 12px #b798ef38;
-  animation:ambient-lamp 14s steps(1,end) -5s infinite;
-}
-/* The lamps dim irregularly; every state lasts at least 720 ms. */
-.edge-light{
-  top:20%;
-  width:12px;
-  height:48vh;
-  max-height:560px;
-  border-radius:999px;
-  animation:ambient-lamp 12s steps(1,end) infinite;
-}
-.edge-light.left{
-  left:6px;
-  background:linear-gradient(90deg,#8cbe34,#f3ffcf 44%,#c1ff4a 68%,#769d2e);
-  box-shadow:0 0 14px #c1ff4a80,0 0 40px #9dd63738;
-}
-.edge-light.right{
-  right:6px;
-  top:33%;
-  background:linear-gradient(90deg,#7958aa,#ece1ff 44%,#c5a0ff 68%,#8160ad);
-  box-shadow:0 0 14px #c5a0ff80,0 0 40px #a175df38;
-  animation-delay:-5.2s;
-}
-.edge-light::after{
-  content:"";
-  position:absolute;
-  top:calc(100% + 18px);
-  left:0;
-  width:100%;
-  height:44px;
-  border-radius:inherit;
-  background:inherit;
-  box-shadow:inherit;
-}
-@keyframes ambient-grid-drift{
-  from{transform:translate3d(0,0,0)}
-  to{transform:translate3d(64px,64px,0)}
-}
-@keyframes ambient-scan{
-  from{transform:translate3d(0,0,0);opacity:.35}
-  to{transform:translate3d(0,72vh,0);opacity:.8}
-}
-@keyframes ambient-orbit-a{
-  from{transform:translate3d(0,-30px,0) rotate(34deg);opacity:.65}
-  to{transform:translate3d(-42px,38px,0) rotate(48deg);opacity:1}
-}
-@keyframes ambient-orbit-b{
-  from{transform:translate3d(-15px,20px,0) rotate(34deg);opacity:.55}
-  to{transform:translate3d(44px,-35px,0) rotate(19deg);opacity:.9}
-}
-@keyframes ambient-beam-a{
-  from{transform:translate3d(0,0,0) rotate(32deg);opacity:.4}
-  to{transform:translate3d(-60px,100px,0) rotate(32deg);opacity:.9}
-}
-@keyframes ambient-beam-b{
-  from{transform:translate3d(0,0,0) rotate(32deg);opacity:.75}
-  to{transform:translate3d(55px,-110px,0) rotate(32deg);opacity:.3}
-}
-@keyframes ambient-lamp{
-  0%,100%{opacity:.82}
-  12%{opacity:.45}
-  18%{opacity:.76}
-  30%{opacity:.76}
-  37%{opacity:.32}
-  53%{opacity:.68}
-  59%{opacity:.88}
-  74%{opacity:.52}
-  81%{opacity:.82}
-  94%{opacity:.56}
-}
+@keyframes ambient-grid-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(64px,64px,0)}}
+@keyframes ambient-scan{from{transform:translate3d(0,0,0);opacity:.2}to{transform:translate3d(0,72vh,0);opacity:.8}}
+@keyframes ambient-orbit-a{from{transform:translate3d(0,-30px,0) rotate(34deg);opacity:.5}to{transform:translate3d(-42px,38px,0) rotate(48deg);opacity:1}}
+@keyframes ambient-orbit-b{from{transform:translate3d(-15px,20px,0) rotate(34deg);opacity:.45}to{transform:translate3d(44px,-35px,0) rotate(19deg);opacity:.85}}
+@keyframes ambient-beam-a{from{transform:translate3d(0,0,0) rotate(32deg);opacity:.25}to{transform:translate3d(-60px,100px,0) rotate(32deg);opacity:.9}}
+@keyframes ambient-beam-b{from{transform:translate3d(0,0,0) rotate(32deg);opacity:.75}to{transform:translate3d(55px,-110px,0) rotate(32deg);opacity:.2}}
+@keyframes ambient-rain-fall{from{transform:translate3d(0,calc(0px - var(--rain-step)),0)}to{transform:translate3d(0,0,0)}}
+@keyframes ambient-particles-rise{0%{transform:translate3d(0,45px,0);opacity:0}20%,70%{opacity:.7}100%{transform:translate3d(36px,-65px,0);opacity:0}}
+@keyframes ambient-sweep{0%,8%{transform:translate3d(0,0,0) rotate(-18deg);opacity:0}30%,65%{opacity:.65}92%,100%{transform:translate3d(440%,0,0) rotate(-18deg);opacity:0}}
+@keyframes ambient-lamp{0%,100%{opacity:0}50%{opacity:1}}
+@keyframes ambient-building-glow{0%,100%{opacity:0}50%{opacity:.78}}
+@media(max-width:900px) and (min-width:651px){.edge-light{width:18px}}
 @media(max-width:650px){
-  .ambient-grid{background-size:64px 64px;opacity:.75}
+  body:not(.login-mode) .photo-city{--photo-x:52%;--photo-y:50%}
+  body:not(.login-mode) .photo-portrait{--photo-x:82%;--photo-y:50%}
+  .ambient-scrim{background:linear-gradient(180deg,#05090b66,#07100e8c 60%,#05090bb3)}
+  .ambient-grid{opacity:.6}
   .ambient-orbit{width:280px;height:280px}
-  .orbit-a{right:-205px;top:38%}
-  .orbit-b{left:-210px;bottom:-60px}
-  .beam-b,.spark-b{display:none}
-  .beam-a{right:2%;height:230px}
-  .spark-a{right:14px;top:79%}
-  .edge-light{width:7px;height:35vh;max-height:300px;opacity:.6}
-  .edge-light.left{left:0;top:24%}
-  .edge-light.right{right:0;top:49%}
-  .edge-light::after{height:28px;top:calc(100% + 12px)}
+  .orbit-a{right:-205px;top:38%}.orbit-b{left:-210px;bottom:-60px}
+  #ambientBackground :is(.beam-b,.spark-b,.rain-b,.particles-b){display:none}
+  .ambient-rain{opacity:.23}.ambient-particles{background-size:313px 299px,417px 371px,471px 353px}
+  .beam-a{right:2%;height:300px}.spark-a{right:14px;top:79%;width:40px}
+  .ambient-sweep{width:55%;animation-duration:30s}
+  .edge-light{width:12px;height:50vh}
+  .edge-light.left{top:22%}.edge-light.right{top:32%}
+  .edge-light::after{height:34px;top:calc(100% + 16px)}
 }
-body.effects-off #ambientBackground{display:none}
-body.effects-off #ambientBackground *,body.effects-off #ambientBackground::before,body.effects-off #ambientBackground::after,
-body.effects-off .edge-light,body.effects-off .edge-light::after{animation:none!important}
+/* Motion preferences retain the authenticated still photograph and its reading scrim. */
+body.effects-off #ambientBackground .ambient-motion,
+body.effects-off #ambientBackground .ambient-photo::before,body.effects-off #ambientBackground .ambient-photo::after,
+body.effects-off #ambientBackground::before,body.effects-off #ambientBackground::after,
+body.effects-off .edge-light{display:none}
+body.effects-off #ambientBackground .photo-city{opacity:1;transform:none;animation:none!important}
+body.effects-off #ambientBackground .photo-portrait{opacity:0;transform:none;animation:none!important}
+body.login-mode.effects-off #ambientBackground{display:none}
 @media(prefers-reduced-motion:reduce){
-  #ambientBackground,.edge-light{display:none}
-  #ambientBackground *,#ambientBackground::before,#ambientBackground::after,.edge-light,.edge-light::after{animation:none!important}
+  #ambientBackground .ambient-motion,#ambientBackground .ambient-photo::before,#ambientBackground .ambient-photo::after,#ambientBackground::before,#ambientBackground::after,.edge-light{display:none}
+  #ambientBackground .photo-city{opacity:1;transform:none;animation:none!important}
+  #ambientBackground .photo-portrait{opacity:0;transform:none;animation:none!important}
+  body.login-mode #ambientBackground{display:none}
 }

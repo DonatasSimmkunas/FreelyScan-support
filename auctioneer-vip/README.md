@@ -47,7 +47,7 @@ Darbdavių importui naudokite `node --env-file=.env.local scripts/import-b2b.mjs
 
 ## Integracija, išsaugant seną svetainę
 
-Į statinės svetainės `auctioneer/vip/` katalogą kopijuojami tik septyni failai iš `public/`: index.html, app.js, styles.css, atmosphere.css, music.js, favicon.svg ir login-art.png. Nei užšifruotas katalogas, nei serverio kodas, konfigūracija, slaptažodžio maiša ar duomenų raktas čia nepatenka. Nuoroda nepridedama į pagrindinį meniu ar sitemap.
+Į statinės svetainės `auctioneer/vip/` katalogą kopijuojami tik devyni failai iš `public/`: index.html, app.js, styles.css, atmosphere.css, music.js, favicon.svg, login-art.png, workspace-city.webp ir workspace-portrait.webp. Nei užšifruotas katalogas, nei serverio kodas, konfigūracija, slaptažodžio maiša ar duomenų raktas čia nepatenka. Nuoroda nepridedama į pagrindinį meniu ar sitemap.
 
 Statinė sąsaja kreipiasi į `https://auctioneer-vip.onrender.com/vip/api/` su `credentials: omit`. Prisijungimas su `X-VIP-Client: static` grąžina atsitiktinį prieigos žetoną tik po sėkmingos serverio patikros; kiekviena duomenų užklausa jį siunčia kaip `Authorization: Bearer …`. Žetonas nesaugomas localStorage, sessionStorage, URL ar diske. Prisijungimą reikia pakartoti atnaujinus puslapį. POST užklausoms papildomai tikrinami Origin ir CSRF. Kitų svetainių kilmės ir neleistinos preflight antraštės atmetamos.
 
@@ -65,7 +65,7 @@ Naudojamas tik vartotojo nurodytas vaizdo įrašas: https://www.youtube.com/watc
 
 Oficiali YouTube IFrame API bando automatiškai įjungti garsą ir paleisti dainą įėjus. Jei naršyklė blokuoja garsą, po pirmo paspaudimo ar klavišo paleidimas automatiškai kartojamas. Sąmoningas sustabdymas gerbiamas. Taip pat yra paleidimo mygtukas ir matomi YouTube valdikliai. Galimybė įterpti ar atkurti šį vaizdo įrašą priklauso ir nuo YouTube, regiono, paskyros bei tinklo. Nėra pažado, kad garsas visose naršyklėse gros be paspaudimo.
 
-Neono vamzdeliai didesni, su šviesos šerdimi ir aureole; jų ryškumas netolygiai pulsuoja. Fono formos juda lėtai. Animacijos nestroboskopinės. Efektų pasirinkimas išsaugomas tik vietiniame įrenginyje. Kontaktai, slaptažodis ir sesijos žetonai localStorage nesaugomi.
+Neono vamzdeliai yra 24 px storio ir 65 vh aukščio (telefone 12 px ir 50 vh). Šviesa sklandžiai įsižiebia ir užgęsta nenutrūkstamame cikle. Prisijungus rodoma lėtai judanti ir persiliejanti dviejų cyberpunk nuotraukų kompozicija, papildyta lietaus, dalelių ir šviesos judesiu. Miesto pastatų šviesos turi atskirus 13, 17, 19 ir 23 sekundžių žalių bei violetinių atspalvių švytėjimo ciklus, kurie juda kartu su nuotraukomis. Išjungus efektus arba įjungus reduced-motion lieka statiška miesto nuotrauka. Animacijos nestroboskopinės. Efektų pasirinkimas išsaugomas tik vietiniame įrenginyje. Kontaktai, slaptažodis ir sesijos žetonai localStorage nesaugomi.
 
 ## Patikra
 

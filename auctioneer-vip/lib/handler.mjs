@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createCatalog} from './catalog.mjs';
 import {createEmployerCatalog} from './employers.mjs';
 import {createAuth} from './auth.mjs';
+import {createCrawlerClient} from './crawler-client.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PUBLIC_FILES={
   '/vip/':['index.html','text/html; charset=utf-8'],
@@ -14,6 +15,13 @@ const PUBLIC_FILES={
   '/vip/atmosphere.css':['atmosphere.css','text/css; charset=utf-8'],
   '/vip/music.js':['music.js','text/javascript; charset=utf-8'],
   '/vip/counter.js':['counter.js','text/javascript; charset=utf-8'],
+  '/vip/crawler.js':['crawler.js','text/javascript; charset=utf-8'],
+  '/vip/crawler.css':['crawler.css','text/css; charset=utf-8'],
+  '/vip/fonts.css':['fonts.css','text/css; charset=utf-8'],
+  '/vip/fonts/manrope-latin.woff2':['fonts/manrope-latin.woff2','font/woff2'],
+  '/vip/fonts/manrope-latin-ext.woff2':['fonts/manrope-latin-ext.woff2','font/woff2'],
+  '/vip/fonts/space-grotesk-latin.woff2':['fonts/space-grotesk-latin.woff2','font/woff2'],
+  '/vip/fonts/space-grotesk-latin-ext.woff2':['fonts/space-grotesk-latin-ext.woff2','font/woff2'],
   '/vip/login-art.png':['login-art.png','image/png'],
   '/vip/workspace-city.webp':['workspace-city.webp','image/webp'],
   '/vip/workspace-portrait.webp':['workspace-portrait.webp','image/webp'],
@@ -38,6 +46,7 @@ export async function createVipHandler(env=process.env){
   if(production&&!origin.startsWith('https://'))throw new Error('Produkcijoje būtinas HTTPS.');
   if(!/^[a-f\d]{64}$/.test(env.VIP_DATA_KEY||''))throw new Error('Nesukonfigūruotas duomenų raktas.');
   const auth=createAuth({username:env.VIP_USERNAME,passwordHash:env.VIP_PASSWORD_HASH,secure:production});
+  const crawler=createCrawlerClient(env);
   const encrypted=await readFile(path.join(root,'private/catalog.enc'));
   const format=encrypted.subarray(0,4).toString();
   if(!['VIP1','VIP2'].includes(format))throw new Error('Neatpažintas duomenų failas.');
@@ -49,6 +58,20 @@ export async function createVipHandler(env=process.env){
   const employers=createEmployerCatalog(Array.isArray(payload)?{companies:[],jobs:[],contactSources:[]}:payload.employers);
   const catalogs={services:catalog,employers};
   const niches=[{id:'services',label:'Paslaugų teikėjai',total:catalog.metadata.total},{id:'employers',label:'Įmonės ieško darbininkų',total:employers.metadata.total}].filter(n=>n.total>0);
+  const importedTotal=niches.reduce((sum,niche)=>sum+niche.total,0);
+  const importedContacts=Object.values(catalogs).reduce((sum,c)=>sum+c.search({withPhone:true}).total+c.search({withEmail:true}).total-c.search({withPhone:true,withEmail:true}).total,0);
+  let cachedTotals={total:importedTotal,baseRecords:importedTotal,discoveredCompanies:0,contacts:importedContacts},totalsUntil=0,totalsPending=null;
+  async function publicTotals(){
+    if(Date.now()<totalsUntil)return cachedTotals;
+    if(!totalsPending)totalsPending=(async()=>{
+      const result=await crawler.request('status');
+      const count=result.status===200?Number(result.data.totalCompanies):cachedTotals.discoveredCompanies;
+      const contacts=result.status===200?Number(result.data.contactCompanies):cachedTotals.contacts-importedContacts;
+      if(Number.isSafeInteger(count)&&count>=0&&count<=10_000_000)cachedTotals={total:importedTotal+count,baseRecords:importedTotal,discoveredCompanies:count,contacts:importedContacts+(Number.isSafeInteger(contacts)&&contacts>=0?contacts:0)};
+      totalsUntil=Date.now()+300_000;return cachedTotals;
+    })().finally(()=>{totalsPending=null;});
+    return totalsPending;
+  }
   const chooseCatalog=niche=>{const key=niche||'services';if(!Object.hasOwn(catalogs,key))throw new Error('Nežinoma paieškos skiltis.');return catalogs[key];};
   const assets=new Map(await Promise.all(Object.entries(PUBLIC_FILES).map(async([url,[file,type]])=>[url,{body:await readFile(path.join(root,'public',file)),type}])));
   return async function vipHandler(req,res){
@@ -75,6 +98,7 @@ export async function createVipHandler(env=process.env){
         });return true;
       }
       if(req.method==='POST'&&req.headers.origin!==origin){send(403,{error:'Užklausa atmesta.'});return true;}
+      if(url.pathname==='/vip/api/totals'&&req.method==='GET'){send(200,await publicTotals());return true;}
       if(url.pathname==='/vip/api/login'&&req.method==='POST'){
         const body=await jsonBody(req);
         const ip=env.VIP_TRUSTED_IP_HEADER?String(req.headers[env.VIP_TRUSTED_IP_HEADER.toLowerCase()]||req.socket.remoteAddress).split(',')[0]:req.socket.remoteAddress;
@@ -90,6 +114,15 @@ export async function createVipHandler(env=process.env){
       if(!s){send(401,{error:'Prisijunkite, kad matytumėte duomenis.'});return true;}
       if(req.method==='POST'&&!auth.csrfValid(s,req.headers['x-vip-csrf'])){send(403,{error:'Sesija neatitinka. Prisijunkite iš naujo.'});return true;}
       if(url.pathname==='/vip/api/session'&&req.method==='GET')send(200,{username:s.username,csrf:s.csrf});
+      else if(url.pathname==='/vip/api/crawler/status'&&req.method==='GET'){
+        const result=await crawler.request('status');send(result.status,result.data);
+      }
+      else if(url.pathname==='/vip/api/crawler/search'&&req.method==='POST'){
+        const result=await crawler.request('search',await jsonBody(req));send(result.status,result.data);
+      }
+      else if(url.pathname==='/vip/api/crawler/run'&&req.method==='POST'){
+        await jsonBody(req);const result=await crawler.request('run');totalsUntil=0;send(result.status,result.data);
+      }
       else if(url.pathname==='/vip/api/metadata'&&req.method==='GET')send(200,{...chooseCatalog(url.searchParams.get('niche')).metadata,niches});
       else if(url.pathname==='/vip/api/search'&&req.method==='POST'){
         const input=await jsonBody(req);send(200,chooseCatalog(input.niche).search(input));

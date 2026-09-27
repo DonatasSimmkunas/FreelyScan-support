@@ -23,7 +23,7 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
   const salt=randomBytes(24).toString('hex'),password=randomBytes(18).toString('hex');
   const passwordHash=`scrypt$32768$8$1$${salt}$${scryptSync(password,salt,64,{N:32768,r:8,p:1,maxmem:64*1024*1024}).toString('hex')}`;
   const origin='https://auctioneer.it.com';
-  const handler=await createVipHandler({...process.env,VIP_USERNAME:'verification',VIP_PASSWORD_HASH:passwordHash,VIP_PUBLIC_ORIGIN:origin,NODE_ENV:'production'});
+  const handler=await createVipHandler({...process.env,VIP_CRAWLER_URL:'',VIP_USERNAME:'verification',VIP_PASSWORD_HASH:passwordHash,VIP_PUBLIC_ORIGIN:origin,NODE_ENV:'production'});
   const server=createServer(async(req,res)=>{if(await handler(req,res))return;res.writeHead(200,{'Content-Type':'text/plain'});res.end('existing-site-unchanged');});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const base=`http://127.0.0.1:${server.address().port}`;
@@ -43,6 +43,15 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
     assert.match(response.headers.get('x-robots-tag'),/noindex/);assert.match(response.headers.get('cache-control'),/no-store/);
     const html=await response.text();assert.ok(!html.includes('+370'));assert.ok(!html.includes('scrypt$'));assert.ok(!html.includes('catalog.enc'));
     response=await fetch(base+'/vip/api/metadata');assert.equal(response.status,401);
+    response=await fetch(base+'/vip/api/crawler/status');assert.equal(response.status,401);
+    for(const path of ['search','run']){
+      response=await fetch(base+'/vip/api/crawler/'+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,401);
+    }
+    response=await fetch(base+'/vip/api/totals');assert.equal(response.status,200);
+    const totals=await response.json();
+    assert.deepEqual(Object.keys(totals).sort(),['baseRecords','contacts','discoveredCompanies','total']);
+    assert.equal(totals.total,6004);assert.equal(totals.baseRecords,6004);assert.equal(totals.discoveredCompanies,0);
+    assert.ok(Number.isInteger(totals.contacts)&&totals.contacts>=5396&&totals.contacts<=6004);
     response=await fetch(base+'/vip/api/metadata?niche=employers');assert.equal(response.status,401);
     response=await fetch(base+'/vip/api/employers/LTB0001');assert.equal(response.status,401);
     response=await fetch(base+'/vip/private/catalog.enc');assert.equal(response.status,404);

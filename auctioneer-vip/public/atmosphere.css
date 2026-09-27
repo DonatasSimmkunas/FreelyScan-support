@@ -17,7 +17,7 @@ body{isolation:isolate}
   background-image:url('/vip/workspace-city.webp');
   background-position:var(--photo-x) var(--photo-y);
   opacity:1;
-  animation:ambient-city-drift 40s ease-in-out infinite alternate;
+  animation:ambient-city-drift 28s ease-in-out infinite alternate;
 }
 .photo-portrait{
   --photo-x:65%;--photo-y:50%;
@@ -148,12 +148,12 @@ body:not(.login-mode) #appView :is(.workspace-head,.results-toolbar,.pagination,
 #appView .error-banner{background:#241318f2}
 @keyframes ambient-city-drift{
   from{transform:translate3d(-.7%,0,0) scale(1.02)}
-  to{transform:translate3d(.7%,-.5%,0) scale(1.08)}
+  to{transform:translate3d(.7%,-.5%,0) scale(1.13)}
 }
 @keyframes ambient-photo-crossfade{
   0%,12%{opacity:0;transform:translate3d(.7%,0,0) scale(1.03)}
-  42%,62%{opacity:1;transform:translate3d(0,-.5%,0) scale(1.07)}
-  92%,100%{opacity:0;transform:translate3d(-.7%,0,0) scale(1.1)}
+  42%,62%{opacity:1;transform:translate3d(0,-.5%,0) scale(1.13)}
+  92%,100%{opacity:0;transform:translate3d(-.7%,0,0) scale(1.03)}
 }
 @keyframes ambient-grid-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(64px,64px,0)}}
 @keyframes ambient-scan{from{transform:translate3d(0,0,0);opacity:.2}to{transform:translate3d(0,72vh,0);opacity:.8}}
@@ -199,7 +199,7 @@ body.effects-off #ambientBackground .photo-portrait{opacity:0;transform:none;ani
 .login-art{--portrait-x:50%;--portrait-y:35%;isolation:isolate}
 .login-art>img,.portrait-atmosphere{
   transform-origin:var(--portrait-x) var(--portrait-y);
-  animation:portrait-city-drift 30s ease-in-out infinite alternate;
+  animation:portrait-city-drift 24s ease-in-out infinite alternate;
 }
 .portrait-atmosphere{
   position:absolute;inset:0;overflow:hidden;pointer-events:none;
@@ -242,8 +242,8 @@ body.effects-off #ambientBackground .photo-portrait{opacity:0;transform:none;ani
   animation:portrait-light-trace 18s ease-in-out -4s infinite;
 }
 @keyframes portrait-city-drift{
-  from{transform:translate3d(-.4%,0,0) scale(1.025)}
-  to{transform:translate3d(.4%,-.4%,0) scale(1.055)}
+  from{transform:translate3d(-.4%,0,0) scale(1.015)}
+  to{transform:translate3d(.4%,-.4%,0) scale(1.12)}
 }
 @keyframes portrait-lights{0%,100%{opacity:0}50%{opacity:.8}}
 @keyframes portrait-rain-drift{from{transform:translate3d(0,-160px,0)}to{transform:translate3d(0,0,0)}}
@@ -259,3 +259,16 @@ body.effects-off .login-art>img{transform:none;animation:none!important}
   .portrait-atmosphere{display:none}
   .login-art>img{transform:none;animation:none!important}
 }
+
+/* Atmospheric lightning stays below controls; one brief pulse per cycle. */
+.vip-lightning,.lightning-flash{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;mix-blend-mode:screen}
+.vip-lightning{overflow:visible}
+.lightning-bolt{fill:none;stroke:#dcf6ff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:0;filter:drop-shadow(0 0 4px #a9d4ff) drop-shadow(0 0 14px #aa83ec);animation:vip-lightning-strike 17s linear -4s infinite}
+.bolt-b{stroke:#d8c4ff;stroke-width:1.4;animation-duration:23s;animation-delay:-12s}
+.bolt-c{stroke:#dbffd1;stroke-width:1.3;animation-duration:29s;animation-delay:-19s}
+.lightning-flash{background:radial-gradient(ellipse at 55% 12%,#cbdcff70,transparent 70%),linear-gradient(#bbc9ff1a,#c4edff09);opacity:0;animation:vip-sky-flash 17s linear -4s infinite}
+@keyframes vip-lightning-strike{0%,6%,100%{opacity:0}1%{opacity:.66}2%{opacity:.12}4%{opacity:0}}
+@keyframes vip-sky-flash{0%,6%,100%{opacity:0}1%{opacity:.26}4%{opacity:0}}
+body.effects-off .vip-lightning,body.effects-off .lightning-flash{display:none}
+@media(prefers-reduced-motion:reduce){.vip-lightning,.lightning-flash{display:none}}
+@media(max-width:650px){.lightning-bolt{stroke-width:1.2}.vip-lightning{opacity:.75}}

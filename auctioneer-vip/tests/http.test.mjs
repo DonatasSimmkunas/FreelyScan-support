@@ -50,8 +50,8 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
     response=await fetch(base+'/vip/api/totals');assert.equal(response.status,200);
     const totals=await response.json();
     assert.deepEqual(Object.keys(totals).sort(),['baseRecords','contacts','discoveredCompanies','total']);
-    assert.equal(totals.total,6004);assert.equal(totals.baseRecords,6004);assert.equal(totals.discoveredCompanies,0);
-    assert.ok(Number.isInteger(totals.contacts)&&totals.contacts>=5396&&totals.contacts<=6004);
+    assert.equal(totals.total,11114);assert.equal(totals.baseRecords,11114);assert.equal(totals.discoveredCompanies,0);
+    assert.ok(Number.isInteger(totals.contacts)&&totals.contacts===5667);
     response=await fetch(base+'/vip/api/metadata?niche=employers');assert.equal(response.status,401);
     response=await fetch(base+'/vip/api/employers/LTB0001');assert.equal(response.status,401);
     response=await fetch(base+'/vip/private/catalog.enc');assert.equal(response.status,404);
@@ -61,10 +61,10 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
     response=await post('/vip/api/login',{username:'verification',password});assert.equal(response.status,200);
     const cookie=response.headers.get('set-cookie').split(';')[0];assert.match(response.headers.get('set-cookie'),/Secure/);const session=await response.json();
     response=await fetch(base+'/vip/api/metadata',{headers:{Cookie:cookie}});const serviceMeta=await response.json();
-    assert.equal(serviceMeta.categories.length,89);assert.ok(serviceMeta.categories.every(c=>c&&!/^\d{4}-\d{2}-\d{2}$/.test(c)));
+    assert.equal(serviceMeta.categories.length,122);assert.ok(serviceMeta.categories.every(c=>c&&!/^\d{4}-\d{2}-\d{2}$/.test(c)));
     response=await fetch(base+'/vip/api/metadata?niche=employers',{headers:{Cookie:cookie}});const employerMeta=await response.json();
     assert.equal(employerMeta.total,1504);assert.equal(employerMeta.jobsTotal,4393);assert.equal(employerMeta.categories.length,9);
-    assert.deepEqual(employerMeta.niches.map(n=>n.total),[4500,1504]);
+    assert.deepEqual(employerMeta.niches.map(n=>n.total),[5217,1504]);
     response=await post('/vip/api/search',{niche:'employers',withPhone:true},cookie,session.csrf);assert.equal(response.status,200);assert.equal((await response.json()).total,1269);
     response=await post('/vip/api/search',{niche:'employers',withEmail:true},cookie,session.csrf);assert.equal((await response.json()).total,404);
     response=await fetch(base+'/vip/api/employers/LTB0001',{headers:{Cookie:cookie}});assert.equal(response.status,200);const company=await response.json();
@@ -74,9 +74,9 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
     response=await fetch(base+'/vip/api/metadata?niche=constructor',{headers:{Cookie:cookie}});assert.equal(response.status,400);
     response=await post('/vip/api/search',{},cookie,'wrong');assert.equal(response.status,403);
     response=await post('/vip/api/search',{},cookie,session.csrf);assert.equal(response.status,200);const data=await response.json();
-    assert.equal(data.total,4500);assert.equal(data.records.length,25);assert.equal(Object.keys(data.records[0]).length,19);assert.equal(data.mixedUnits,true);
-    response=await post('/vip/api/search',{withPhone:true},cookie,session.csrf);assert.equal((await response.json()).total,4127);
-    response=await post('/vip/api/search',{withPrice:true},cookie,session.csrf);assert.equal((await response.json()).total,3476);
+    assert.equal(data.total,5217);assert.equal(data.records.length,25);assert.ok(serviceMeta.fields.slice(0,19).every(field=>Object.hasOwn(data.records[0],field.key)));assert.ok(Object.keys(data.records[0]).every(key=>serviceMeta.fields.some(field=>field.key===key)));assert.equal(data.mixedUnits,true);
+    response=await post('/vip/api/search',{withPhone:true},cookie,session.csrf);assert.equal((await response.json()).total,4387);
+    response=await post('/vip/api/search',{withPrice:true},cookie,session.csrf);assert.equal((await response.json()).total,3899);
     response=await post('/vip/api/logout',{},cookie,session.csrf);assert.equal(response.status,200);
     response=await post('/vip/api/search',{},cookie,session.csrf);assert.equal(response.status,401);
     response=await fetch(base+'/vip/api/employers/LTB0001',{headers:{Cookie:cookie}});assert.equal(response.status,401);

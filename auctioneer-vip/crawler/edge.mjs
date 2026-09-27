@@ -1,13 +1,13 @@
 import * as crawlerSources from '../lib/crawler-sources.mjs';
 const TOKEN_SHA256='__CRAWLER_TOKEN_SHA256__';
-const SOURCE_RUNNERS=[['rc_registry',crawlerSources.fetchRegistryBatch],['uzt_vacancies',crawlerSources.fetchVacanciesBatch],['company_careers',crawlerSources.fetchCareerBatch]];
+const SOURCE_RUNNERS=[['company_careers',crawlerSources.fetchCareerBatch],...crawlerSources.CAREER_BOARD_SOURCES.map(board=>[board.id,options=>crawlerSources.fetchCareerBoardBatch({...options,boardId:board.id})])];
 const RESPONSE_HEADERS={'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store, private','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow'};
 const text=(v,max=1000)=>typeof v==='string'?v.trim().slice(0,max):'';
 const date=v=>{if(!v)return null;const n=Date.parse(String(v));return Number.isFinite(n)?new Date(n).toISOString():null;};
 const url=v=>{try{const u=new URL(v);return ['https:','http:'].includes(u.protocol)?u.href.slice(0,2000):'';}catch{return '';}};
 export async function sha256(value){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(v=>v.toString(16).padStart(2,'0')).join('');}
 const equalHash=(a,b)=>{if(a.length!==b.length)return false;let n=0;for(let i=0;i<a.length;i++)n|=a.charCodeAt(i)^b.charCodeAt(i);return n===0;};
-export function nextScheduledRun(timestamp){const interval=6*3600000;return new Date((Math.floor(timestamp/interval)+1)*interval).toISOString();}
+export function nextScheduledRun(timestamp){const interval=15*60000;return new Date((Math.floor(timestamp/interval)+1)*interval).toISOString();}
 class RequestError extends Error{constructor(status,message){super(message);this.status=status;}}
 export async function normalizeBatch(batch,sourceId,nowIso){
   if(!batch||batch.sourceId!==sourceId||batch.status!=='ok')throw new Error('Source unavailable');
@@ -54,27 +54,35 @@ export function createCrawlerHandler({env=key=>globalThis.Deno?.env.get(key),fet
     const summary=[];let totalNew=0,totalCompanies=0,totalJobs=0;
     try{
       await runDb('vip_crawler_runs',{method:'POST',body:{id:runId,started_at:startedIso}});
-      const states=await runDb('vip_crawler_sources?select=id,cursor,status');
-      for(const[sourceId,fetchBatch]of sources){
-        if(states.find(s=>s.id===sourceId)?.status==='blocked'){
-          summary.push({id:sourceId,status:'blocked',error:'Šaltinis blokuoja šio serverio užklausas. Rinkimas pristabdytas, kol bus suteikta prieiga.'});continue;
-        }
+      const states=await runDb('vip_crawler_sources?select=id,cursor,status,retry_after,last_checked');
+      const collect=async([sourceId,fetchBatch])=>{
+        const source=states.find(s=>s.id===sourceId);
+        if(['blocked','removed'].includes(source?.status))return{id:sourceId,status:source.status,error:'Šaltinis pašalintas iš aktyvaus rinkimo. Išsaugoti duomenys palikti.'};
+        if(Date.parse(source?.retry_after||'')>now())return{id:sourceId,status:'cooldown',error:'Laukiama šaltinio nurodyto pakartotinės užklausos laiko.'};
         const remaining=75000-(now()-started);
-        if(remaining<6000){summary.push({id:sourceId,status:'skipped',error:'Pasiektas vieno rinkimo laiko limitas.'});continue;}
+        if(remaining<6000)return{id:sourceId,status:'skipped',error:'Pasiektas vieno rinkimo laiko limitas.'};
         try{
-          const batch=await fetchBatch({cursor:states.find(s=>s.id===sourceId)?.cursor??null,limit:250,fetchImpl,signal:AbortSignal.any([deadline,AbortSignal.timeout(Math.min(20000,remaining-3000))])});
+          const batch=await fetchBatch({cursor:source?.cursor??null,limit:250,fetchImpl,signal:AbortSignal.any([deadline,AbortSignal.timeout(Math.min(20000,remaining-3000))])});
           const normalized=await normalizeBatch(batch,sourceId,new Date(now()).toISOString());
           const saved=await runDb('rpc/vip_crawler_ingest',{method:'POST',body:normalized});
           totalNew+=saved.newCompanies||0;totalCompanies+=saved.companiesSeen||0;totalJobs+=saved.jobsSeen||0;
-          summary.push({id:sourceId,status:'ok',...saved,warnings:normalized.p_warnings});
+          return{id:sourceId,status:'ok',...saved,warnings:normalized.p_warnings};
         }catch(cause){
           const sourceCode=['source_http_error','source_aborted','source_unavailable','source_invalid_json','source_invalid_schema','source_too_large'].includes(cause?.code)?cause.code:'source_save_failed';
           const httpStatus=Number.isInteger(cause?.status)&&cause.status>=400&&cause.status<=599?cause.status:null;
-          const error='Šaltinio nepavyko patikrinti.'+(httpStatus?' HTTP '+httpStatus+'.':'')+' Išsaugoti duomenys ir žymeklis nepakeisti.';
-          summary.push({id:sourceId,status:'error',error,errorCode:sourceCode,...(httpStatus?{httpStatus}:{})});
-          try{await runDb('vip_crawler_sources?id=eq.'+encodeURIComponent(sourceId),{method:'PATCH',body:{status:'error',last_checked:new Date(now()).toISOString(),error}});}catch{}
+          const removed=httpStatus===401||httpStatus===403;
+          const retryAfter=Number(cause?.retryAfter),retryAt=Number.isFinite(retryAfter)&&retryAfter>0?new Date(now()+Math.min(retryAfter,(8.64e15-now())/1000)*1000).toISOString():null;
+          const error=removed?'Prieiga prie šaltinio negalima. Jis pašalintas iš aktyvaus rinkimo.':'Šaltinio nepavyko patikrinti.'+(httpStatus?' HTTP '+httpStatus+'.':'')+' Išsaugoti duomenys ir žymeklis nepakeisti.';
+          try{await runDb('vip_crawler_sources?id=eq.'+encodeURIComponent(sourceId),{method:'PATCH',body:{status:removed?'removed':'error',last_checked:new Date(now()).toISOString(),retry_after:retryAt,error}});}catch{}
+          return{id:sourceId,status:removed?'removed':'error',error,errorCode:sourceCode,...(httpStatus?{httpStatus}:{})};
         }
-      }
+      };
+      // Independent sources run with bounded concurrency under the same global lease.
+      const orderedSources=[...sources].sort((a,b)=>(Date.parse(states.find(s=>s.id===a[0])?.last_checked||'')||0)-(Date.parse(states.find(s=>s.id===b[0])?.last_checked||'')||0));
+      let nextSource=0;
+      await Promise.all(Array.from({length:Math.min(3,orderedSources.length)},async()=>{
+        while(nextSource<orderedSources.length){const index=nextSource++;summary[index]=await collect(orderedSources[index]);}
+      }));
       const finished=new Date(now()).toISOString(),ok=summary.filter(s=>s.status==='ok').length;
       await runDb('vip_crawler_runs?id=eq.'+runId,{method:'PATCH',body:{finished_at:finished,status:ok===sources.length?'ok':ok?'partial':'error',new_companies:totalNew,companies_seen:totalCompanies,jobs_seen:totalJobs,summary}});
     }catch{

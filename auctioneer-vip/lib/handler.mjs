@@ -7,6 +7,7 @@ import {createCatalog} from './catalog.mjs';
 import {createEmployerCatalog} from './employers.mjs';
 import {createAuth} from './auth.mjs';
 import {createCrawlerClient} from './crawler-client.mjs';
+import {createLiveEmployerCatalog} from './live-employers.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PUBLIC_FILES={
   '/vip/':['index.html','text/html; charset=utf-8'],
@@ -18,6 +19,16 @@ const PUBLIC_FILES={
   '/vip/crawler.js':['crawler.js','text/javascript; charset=utf-8'],
   '/vip/crawler.css':['crawler.css','text/css; charset=utf-8'],
   '/vip/fonts.css':['fonts.css','text/css; charset=utf-8'],
+  '/vip/mottos.css':['mottos.css','text/css; charset=utf-8'],
+  '/vip/mottos.js':['mottos.js','text/javascript; charset=utf-8'],
+  '/vip/saved-searches.js':['saved-searches.js','text/javascript; charset=utf-8'],
+  '/vip/saved-searches.css':['saved-searches.css','text/css; charset=utf-8'],
+  '/vip/experience.js':['experience.js','text/javascript; charset=utf-8'],
+  '/vip/experience.css':['experience.css','text/css; charset=utf-8'],
+  '/vip/hologram.js':['hologram.js','text/javascript; charset=utf-8'],
+  '/vip/hologram.css':['hologram.css','text/css; charset=utf-8'],
+  '/vip/holo-cards.js':['holo-cards.js','text/javascript; charset=utf-8'],
+  '/vip/holo-cards.css':['holo-cards.css','text/css; charset=utf-8'],
   '/vip/fonts/manrope-latin.woff2':['fonts/manrope-latin.woff2','font/woff2'],
   '/vip/fonts/manrope-latin-ext.woff2':['fonts/manrope-latin-ext.woff2','font/woff2'],
   '/vip/fonts/space-grotesk-latin.woff2':['fonts/space-grotesk-latin.woff2','font/woff2'],
@@ -55,24 +66,38 @@ export async function createVipHandler(env=process.env){
   const plaintext=Buffer.concat([decipher.update(encrypted.subarray(32)),decipher.final()]);
   const payload=JSON.parse((format==='VIP2'?gunzipSync(plaintext):plaintext).toString('utf8'));
   const catalog=createCatalog(Array.isArray(payload)?payload:payload.providers);
-  const employers=createEmployerCatalog(Array.isArray(payload)?{companies:[],jobs:[],contactSources:[]}:payload.employers);
+  const employerPayload=Array.isArray(payload)?{companies:[],jobs:[],contactSources:[]}:payload.employers;
+  const employers=createEmployerCatalog(employerPayload);
+  const liveEmployers=createLiveEmployerCatalog(employerPayload,crawler);
   const catalogs={services:catalog,employers};
   const niches=[{id:'services',label:'Paslaugų teikėjai',total:catalog.metadata.total},{id:'employers',label:'Įmonės ieško darbininkų',total:employers.metadata.total}].filter(n=>n.total>0);
-  const importedTotal=niches.reduce((sum,niche)=>sum+niche.total,0);
+  const importedTotal=niches.reduce((sum,niche)=>sum+niche.total,0)+employers.metadata.jobsTotal;
   const importedContacts=Object.values(catalogs).reduce((sum,c)=>sum+c.search({withPhone:true}).total+c.search({withEmail:true}).total-c.search({withPhone:true,withEmail:true}).total,0);
   let cachedTotals={total:importedTotal,baseRecords:importedTotal,discoveredCompanies:0,contacts:importedContacts},totalsUntil=0,totalsPending=null;
   async function publicTotals(){
     if(Date.now()<totalsUntil)return cachedTotals;
     if(!totalsPending)totalsPending=(async()=>{
-      const result=await crawler.request('status');
-      const count=result.status===200?Number(result.data.totalCompanies):cachedTotals.discoveredCompanies;
-      const contacts=result.status===200?Number(result.data.contactCompanies):cachedTotals.contacts-importedContacts;
-      if(Number.isSafeInteger(count)&&count>=0&&count<=10_000_000)cachedTotals={total:importedTotal+count,baseRecords:importedTotal,discoveredCompanies:count,contacts:importedContacts+(Number.isSafeInteger(contacts)&&contacts>=0?contacts:0)};
-      totalsUntil=Date.now()+300_000;return cachedTotals;
+      const [result,live]=await Promise.all([crawler.request('status'),liveEmployers.getCatalog()]);
+      if(result.status===200){
+        const count=Number(result.data.totalCompanies),contacts=Number(result.data.contactCompanies);
+        if(Number.isSafeInteger(count)&&count>=0&&count<=10_000_000){
+          const extraCompanies=Math.max(0,count-(live.metadata.crawlerCompaniesTotal||0));
+          const knownContacts=live.search({withPhone:true}).total+live.search({withEmail:true}).total-live.search({withPhone:true,withEmail:true}).total;
+          const importedEmployerContacts=employers.search({withPhone:true}).total+employers.search({withEmail:true}).total-employers.search({withPhone:true,withEmail:true}).total;
+          const extraContacts=Number.isSafeInteger(contacts)&&contacts>=0?Math.max(0,contacts-(live.metadata.crawlerContactCompaniesTotal||0)):0;
+          cachedTotals={total:catalog.metadata.total+live.metadata.total+extraCompanies+live.metadata.jobsTotal,baseRecords:importedTotal,discoveredCompanies:live.metadata.total-employers.metadata.total+extraCompanies,contacts:importedContacts-importedEmployerContacts+knownContacts+extraContacts};
+        }
+      }
+      totalsUntil=Date.now()+30_000;return cachedTotals;
     })().finally(()=>{totalsPending=null;});
     return totalsPending;
   }
-  const chooseCatalog=niche=>{const key=niche||'services';if(!Object.hasOwn(catalogs,key))throw new Error('Nežinoma paieškos skiltis.');return catalogs[key];};
+  const chooseCatalog=async niche=>{const key=niche||'services';if(!Object.hasOwn(catalogs,key))throw new Error('Nežinoma paieškos skiltis.');return key==='employers'?liveEmployers.getCatalog():catalog;};
+  let crawlerRevision='';
+  function updateCrawlerRevision(status){
+    const revision=JSON.stringify([status.lastRun,status.totalCompanies,status.totalJobs,status.contactCompanies]);
+    if(revision!==crawlerRevision){crawlerRevision=revision;liveEmployers.invalidate();totalsUntil=0;}
+  }
   const assets=new Map(await Promise.all(Object.entries(PUBLIC_FILES).map(async([url,[file,type]])=>[url,{body:await readFile(path.join(root,'public',file)),type}])));
   return async function vipHandler(req,res){
     let cors={};
@@ -115,20 +140,24 @@ export async function createVipHandler(env=process.env){
       if(req.method==='POST'&&!auth.csrfValid(s,req.headers['x-vip-csrf'])){send(403,{error:'Sesija neatitinka. Prisijunkite iš naujo.'});return true;}
       if(url.pathname==='/vip/api/session'&&req.method==='GET')send(200,{username:s.username,csrf:s.csrf});
       else if(url.pathname==='/vip/api/crawler/status'&&req.method==='GET'){
-        const result=await crawler.request('status');send(result.status,result.data);
+        const result=await crawler.request('status');if(result.status===200)updateCrawlerRevision(result.data);send(result.status,result.data);
       }
       else if(url.pathname==='/vip/api/crawler/search'&&req.method==='POST'){
         const result=await crawler.request('search',await jsonBody(req));send(result.status,result.data);
       }
       else if(url.pathname==='/vip/api/crawler/run'&&req.method==='POST'){
-        await jsonBody(req);const result=await crawler.request('run');totalsUntil=0;send(result.status,result.data);
+        await jsonBody(req);const result=await crawler.request('run');totalsUntil=0;liveEmployers.invalidate();if(result.status===200)updateCrawlerRevision(result.data);send(result.status,result.data);
       }
-      else if(url.pathname==='/vip/api/metadata'&&req.method==='GET')send(200,{...chooseCatalog(url.searchParams.get('niche')).metadata,niches});
+      else if(url.pathname==='/vip/api/metadata'&&req.method==='GET'){
+        const selected=await chooseCatalog(url.searchParams.get('niche'));
+        const live=await liveEmployers.getCatalog();
+        send(200,{...selected.metadata,niches:niches.map(niche=>niche.id==='employers'?{...niche,total:live.metadata.total}:niche)});
+      }
       else if(url.pathname==='/vip/api/search'&&req.method==='POST'){
-        const input=await jsonBody(req);send(200,chooseCatalog(input.niche).search(input));
+        const input=await jsonBody(req);send(200,(await chooseCatalog(input.niche)).search(input));
       }
       else if(/^\/vip\/api\/employers\/[A-Za-z0-9_-]+$/.test(url.pathname)&&req.method==='GET'){
-        const record=employers.detail(url.pathname.split('/').at(-1));
+        const record=(await liveEmployers.getCatalog()).detail(url.pathname.split('/').at(-1));
         send(record?200:404,record||{error:'Įmonė nerasta.'});
       }
       else if(url.pathname==='/vip/api/logout'&&req.method==='POST'){

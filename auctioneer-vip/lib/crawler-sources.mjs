@@ -7,10 +7,19 @@ const REQUEST_TIMEOUT_MS = 20_000;
 const MAX_RESPONSE_BYTES = 8_000_000;
 const DAY_MS = 86_400_000;
 
+// Explicitly verified public employer boards; removed government feeds remain only
+// as legacy adapters below and are never part of the active collection config.
+export const CAREER_BOARD_SOURCES = Object.freeze([
+  Object.freeze({id:'careers_cybercare',provider:'CyberCare',type:'ashby',official:'https://cybercare.cc/careers/',api:'https://api.ashbyhq.com/posting-api/job-board/cybercare',jobHost:'jobs.ashbyhq.com',path:'/cybercare/'}),
+  Object.freeze({id:'careers_sintra',provider:'Sintra',type:'ashby',official:'https://sintra.ai/careers',api:'https://api.ashbyhq.com/posting-api/job-board/sintra',jobHost:'jobs.ashbyhq.com',path:'/sintra/'}),
+  Object.freeze({id:'careers_tesonet_global',provider:'Tesonet Global',type:'ashby',official:'https://tesonet.com/careers/',api:'https://api.ashbyhq.com/posting-api/job-board/tesonet-global',jobHost:'jobs.ashbyhq.com',path:'/tesonet-global/'}),
+  Object.freeze({id:'careers_surfshark',provider:'Surfshark',type:'ashby',official:'https://surfshark.com/career',api:'https://api.ashbyhq.com/posting-api/job-board/surfshark',jobHost:'jobs.ashbyhq.com',path:'/surfshark/'}),
+  Object.freeze({id:'careers_nord_security',provider:'Nord Security',type:'ashby',official:'https://nordsecurity.com/careers/',api:'https://api.ashbyhq.com/posting-api/job-board/nord-security',jobHost:'jobs.ashbyhq.com',path:'/nord-security/'}),
+  Object.freeze({id:'careers_omnisend',provider:'Omnisend',type:'lever',official:'https://www.omnisend.com/careers/',api:'https://api.lever.co/v0/postings/omnisend?mode=json&limit=250',jobHost:'jobs.lever.co',path:'/omnisend/'}),
+]);
 export const SOURCE_DEFINITIONS = Object.freeze([
-  Object.freeze({id: 'rc_registry', name: 'Registrų centras — Juridinių asmenų registras', url: REGISTRY_URL, documentationUrl: 'https://data.gov.lt/datasets/1484/', license: 'CC-BY-4.0', expectedUpdateDays: 31}),
-  Object.freeze({id: 'uzt_vacancies', name: 'Užimtumo tarnybos darbo vietos', url: VACANCIES_URL, documentationUrl: 'https://data.gov.lt/datasets/2894/', license: 'CC-BY-4.0', expectedUpdateDays: 1}),
-  Object.freeze({id: 'company_careers', name: 'Įmonių karjeros puslapiai', url: 'https://career.oxylabs.io/', documentationUrl: 'https://github.com/lever/postings-api', expectedUpdateDays: 1}),
+  Object.freeze({id: 'company_careers', name: 'Oxylabs ir Hostinger karjeros puslapiai', url: 'https://career.oxylabs.io/', documentationUrl: 'https://github.com/lever/postings-api', expectedUpdateDays: 1}),
+  ...CAREER_BOARD_SOURCES.map(board=>Object.freeze({id:board.id,name:board.provider+' — karjeros puslapis',url:board.official,api:board.api,expectedUpdateDays:1})),
 ]);
 
 const text = value => typeof value === 'string' ? value.trim() : typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
@@ -44,7 +53,8 @@ async function requestJson(url, {fetchImpl, signal, sourceId}) {
     const response = await fetchImpl(url, {headers: {Accept: 'application/json'}, credentials: 'omit', redirect: 'error', signal: controller.signal});
     if (!response.ok) {
       const error = sourceError(sourceId, 'source_http_error', `Šaltinis grąžino HTTP ${response.status}.`, response.status);
-      const retryAfter = Number(response.headers.get('retry-after'));
+      const retryHeader=response.headers.get('retry-after');
+      const retryAfter = /^\d+$/.test(retryHeader||'')?Number(retryHeader):Math.ceil((Date.parse(retryHeader)-Date.now())/1000);
       if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfter = retryAfter;
       throw error;
     }
@@ -251,10 +261,19 @@ function verifiedJobUrl(value, board) {
 }
 
 export async function fetchCareerBatch({cursor = null, limit = MAX_BATCH, fetchImpl = globalThis.fetch, signal, now = new Date()} = {}) {
-  const sourceId = 'company_careers';
-  const size = batchSize(limit);
   const {board: boardIndex, offset} = careerCursor(cursor);
-  const board = CAREER_BOARDS[boardIndex];
+  return readCareerBoard(CAREER_BOARDS[boardIndex],{sourceId:'company_careers',offset,size:batchSize(limit),fetchImpl,signal,now,next:nextOffset=>nextOffset!==null?`careers:${boardIndex}:${nextOffset}`:boardIndex+1<CAREER_BOARDS.length?`careers:${boardIndex+1}:0`:null});
+}
+
+export async function fetchCareerBoardBatch({boardId,cursor=null,limit=MAX_BATCH,fetchImpl=globalThis.fetch,signal,now=new Date()}={}) {
+  const board=CAREER_BOARD_SOURCES.find(item=>item.id===boardId);
+  if(!board)throw new TypeError('Nežinomas patvirtintas karjeros šaltinis.');
+  const prefix=`board:${board.id}:`,offsetText=cursor===null||cursor===undefined?'0':typeof cursor==='string'&&cursor.startsWith(prefix)?cursor.slice(prefix.length):'';
+  if(!/^\d{1,5}$/.test(offsetText))throw new TypeError('Netinkamas karjeros šaltinio puslapio žymeklis.');
+  return readCareerBoard(board,{sourceId:board.id,offset:Number(offsetText),size:batchSize(limit),fetchImpl,signal,now,next:nextOffset=>nextOffset===null?null:prefix+nextOffset});
+}
+
+async function readCareerBoard(board,{sourceId,offset,size,fetchImpl,signal,now,next}) {
   const response = await requestJson(board.api, {fetchImpl, signal, sourceId});
   const rows = board.type === 'lever' ? response.data : response.data?.jobs;
   if (!Array.isArray(rows) || rows.length > 2000 || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw sourceError(sourceId, 'source_invalid_schema', 'Pasikeitė karjeros šaltinio duomenų struktūra.');
@@ -270,12 +289,13 @@ export async function fetchCareerBatch({cursor = null, limit = MAX_BATCH, fetchI
     const location = careerLocation(row, board);
     const url = verifiedJobUrl(board.type === 'lever' ? row.hostedUrl : row.jobUrl, board);
     if (!id || !title || location === null || !url || row.isListed === false || seen.has(id)) continue;
+    if(board.id&&/talent pool|future (?:opportunit|position|role)|general application|spontaneous application|open application|join.{0,20}talent|^apply here: future\b|didn.t find your role/iu.test(title))continue;
     seen.add(id);
     matching.push({source_id: sourceId, source_job_id: `${board.provider.toLowerCase()}:${id}`, company_code: null, provider: board.provider, title, city_area: location, url, status: 'open', published_at: timestamp(board.type === 'lever' ? row.createdAt : row.publishedAt), source_updated_at: response.sourceUpdatedAt, expires_at: null});
   }
   matching.sort((a, b) => (b.published_at || '').localeCompare(a.published_at || '') || a.source_job_id.localeCompare(b.source_job_id));
   const jobs = matching.slice(offset, offset + size);
-  const nextCursor = offset + size < matching.length ? `careers:${boardIndex}:${offset + size}` : boardIndex + 1 < CAREER_BOARDS.length ? `careers:${boardIndex + 1}:0` : null;
+  const nextCursor = next(offset + size < matching.length ? offset + size : null);
   const companies = jobs.length ? [{company_code: null, provider: board.provider, legal_form: '', city_area: uniqueText(jobs.map(job => job.city_area)), address: '', profile_url: board.official, source_url: board.official, registered_at: null, source_id: sourceId, company_phone: '', company_email: ''}] : [];
   return {sourceId, status: 'ok', companies, jobs, nextCursor, sourceUpdatedAt: response.sourceUpdatedAt, fetchedAt: now.toISOString(), warnings, rawCount: rows.length, observedLatestDate: matching[0]?.published_at || null, employer: board.provider, listingMeaning: 'Šiuo tikrinimu viešai skelbiamos darbdavio karjeros pozicijos; vietos užpildymas nepriklausomai nepatvirtintas.'};
 }

@@ -1,4 +1,5 @@
 import {startOnEntry} from './music.js?v=2';
+import {createSavedSearches} from './saved-searches.js?v=1';
 const $=id=>document.getElementById(id);
 const staticClient=!['localhost','127.0.0.1','[::1]'].includes(location.hostname);
 const apiBase=staticClient?'https://auctioneer-vip.onrender.com/vip/api/':'/vip/api/';
@@ -15,7 +16,7 @@ const categoryText=value=>{const s=String(value??'').trim();return !s||/^(__miss
 const visibleField=f=>f.type!=='date'&&!/(?:date|timestamp|checked_at|updated_at|created_at|patikrinta|tikrinimo_data)/i.test(f.key)&&!/(?:tikrinimo|patikros|patikrinimo|atnaujinimo)\s+data/i.test(f.label||'');
 const serviceSorts=[['price_asc','Kaina: nuo mažiausios'],['price_desc','Kaina: nuo didžiausios'],['name_asc','Pavadinimas: A–Ž'],['name_desc','Pavadinimas: Ž–A'],['rating_desc','Geriausias įvertinimas'],['reviews_desc','Daugiausia atsiliepimų'],['experience_desc','Didžiausia patirtis'],['city_asc','Teritorija: A–Ž']];
 const employerSorts=[['jobs_desc','Skelbimų: nuo daugiausia'],['jobs_asc','Skelbimų: nuo mažiausia'],['name_asc','Pavadinimas: A–Ž'],['name_desc','Pavadinimas: Ž–A'],['city_asc','Teritorija: A–Ž']];
-let accessToken='',csrf='',metadata=null,rows=[],page=1,pages=1,currentNiche='services',sessionVersion=0,nicheSerial=0,requestSerial=0,detailSerial=0,pendingMetadata=null,pendingRequest=null,pendingDetail=null,debounceId,toastTimer;
+let accessToken='',csrf='',metadata=null,rows=[],page=1,pages=1,currentNiche='services',sessionVersion=0,nicheSerial=0,requestSerial=0,detailSerial=0,pendingMetadata=null,pendingRequest=null,pendingDetail=null,debounceId,toastTimer,crawlerRevision='',refreshInfoPending=false;
 const operators=[['contains','Turi tekstą'],['not_contains','Neturi teksto'],['eq','Lygu'],['neq','Nelygu'],['gte','Ne mažiau nei'],['lte','Ne daugiau nei'],['missing','Trūksta reikšmės'],['present','Reikšmė nurodyta']];
 const mobileLayout=matchMedia('(max-width: 650px)');
 const employers=()=>currentNiche==='employers';
@@ -55,6 +56,7 @@ function revealResults(){if(!mobileLayout.matches)return;$('filterPanel').open=f
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
 function invalidateDetail(){detailSerial++;pendingDetail?.abort();pendingDetail=null;}
 function clearSensitiveView(message=''){
+  savedSearches.deactivate();crawlerRevision='';
   accessToken='';csrf='';sessionVersion++;rows=[];metadata=null;nicheSerial++;requestSerial++;pendingMetadata?.abort();pendingRequest?.abort();invalidateDetail();clearTimeout(debounceId);$('resultsBody').replaceChildren();$('detailContent').replaceChildren();
   if($('detailDialog').open)$('detailDialog').close();
   $('activeFilterChips').replaceChildren();$('activeFilterChips').hidden=true;$('clearSearch').hidden=true;
@@ -85,6 +87,7 @@ function renderNiche(){
 }
 async function switchNiche(next){
   if(!['services','employers'].includes(next))return;
+  window.dispatchEvent(new CustomEvent('vip:clear-results'));
   const serial=++nicheSerial;currentNiche=next;metadata=null;rows=[];requestSerial++;pendingRequest?.abort();pendingMetadata?.abort();invalidateDetail();clearTimeout(debounceId);
   if($('detailDialog').open)$('detailDialog').close();$('detailContent').replaceChildren();
   $('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';$('resultsBody').replaceChildren();$('resultCount').textContent='—';$('mobileResultCount').textContent='—';$('pageInfo').textContent='';$('previousPage').disabled=true;$('nextPage').disabled=true;
@@ -98,11 +101,9 @@ async function switchNiche(next){
     addOptions('category',metadata.categories);addOptions('city',metadata.cities);addOptions('unit',metadata.units||[],unitLabel);
     if(!employers()){const option=document.createElement('option');option.value='__missing__';option.textContent='Vienetas nenurodytas';$('unit').append(option);}
     addOptions('employerType',metadata.employerTypes||[]);addOptions('contactStatus',metadata.contactStatuses||[]);addOptions('portal',metadata.portals||[]);
-    $('statRecords').textContent=fmt.format(metadata.total);$('statCategories').textContent=fmt.format(metadata.categories.length);$('statCities').textContent=fmt.format((metadata.cities||[]).length);$('statPriced').textContent=fmt.format(employers()?(metadata.jobsTotal||0):metadata.total-(metadata.missingPrice||0));
-    $('sourceCount').textContent=`${fmt.format(metadata.total)} ${employers()?'įmonių':'įrašų'} · ${metadata.fields.length} laukų`;
+    renderCatalogCounts(data);
     $('advancedLabel').textContent=`Visų ${metadata.fields.length} laukų filtrai`;
     $('advancedNote').textContent=employers()?'Filtruokite įmonių informaciją, veiklos sritis, ieškomas pareigas ir kontaktų būseną.':'Filtruokite visus pateiktus duomenų laukus. Įmonės žyma nepatvirtina teikėjo teisinės formos.';
-    for(const niche of data.niches||[]){const count=$('nicheCount-'+niche.id);if(count)count.textContent=fmt.format(niche.total);}
     updateTerritory();activeFilters();await search(1);
   }catch(error){if(error.name!=='AbortError'&&serial===nicheSerial){$('searchError').textContent=error.message;$('searchError').hidden=false;throw error;}}
   finally{if(serial===nicheSerial){$('searchForm').inert=false;$('searchForm').setAttribute('aria-busy','false');$('loading').hidden=true;}}
@@ -111,6 +112,8 @@ async function enter(session){
   const version=++sessionVersion;if(staticClient&&session.accessToken)accessToken=session.accessToken;csrf=session.csrf;
   await switchNiche('services');if(!csrf||version!==sessionVersion)return;
   $('loginView').hidden=true;$('appView').hidden=false;$('logout').hidden=false;document.body.classList.remove('login-mode');$('routeState').textContent='PAIEŠKA';$('password').value='';
+  savedSearches.activate(session.username);
+  publishResults();
   if(mobileLayout.matches){document.activeElement?.blur();$('appView').scrollIntoView({block:'start',behavior:'instant'});}else $('q').focus({preventScroll:true});
 }
 $('nichePicker').addEventListener('click',event=>{const button=event.target.closest('button[data-niche]');if(button&&(button.dataset.niche!==currentNiche||!metadata))switchNiche(button.dataset.niche).catch(()=>{});});
@@ -126,6 +129,51 @@ function searchInput(targetPage=1){
   const input={niche:currentNiche,q:$('q').value,category:$('category').value,city:$('city').value,withPhone:$('withPhone').checked,withEmail:$('withEmail').checked,sort:$('sort').value,page:targetPage,pageSize:Number($('pageSize').value),rules:rules(),ruleMode:$('ruleMode').value};
   return employers()?{...input,employerType:$('employerType').value,contactStatus:$('contactStatus').value,portal:$('portal').value}:{...input,includeNationwide:$('includeNationwide').checked,coverage:$('coverage').value,unit:$('unit').value,minPrice:$('minPrice').value,maxPrice:$('maxPrice').value,withPrice:$('withPrice').checked};
 }
+const savedSearches=createSavedSearches({before:$('searchForm'),capture:()=>{if(!csrf||!metadata)throw new Error('Palaukite, kol bus įkelti paieškos filtrai.');return searchInput(1);},apply:applySearchSnapshot});
+async function applySearchSnapshot(filters){
+  if(!csrf)return;const version=sessionVersion;
+  let expectedNiche=nicheSerial;
+  if(filters.niche!==currentNiche){const switching=switchNiche(filters.niche);expectedNiche=nicheSerial;await switching;}
+  if(!csrf||version!==sessionVersion)return;
+  if(!metadata||filters.niche!==currentNiche||nicheSerial!==expectedNiche)throw new Error('Pasirinkta kita paieška. Išsaugotą paiešką galite pritaikyti dar kartą.');
+  $('searchForm').reset();$('rules').replaceChildren();
+  addOptions('city',metadata.cities||[]);
+  const fields=['q','category','city','coverage','unit','minPrice','maxPrice','employerType','contactStatus','portal','sort','pageSize','ruleMode'];
+  for(const id of fields){const field=$(id),value=String(filters[id]??'');if(field.tagName==='SELECT'){if([...field.options].some(o=>o.value===value))field.value=value;}else field.value=value;}
+  for(const id of ['includeNationwide','withPhone','withEmail','withPrice'])$(id).checked=filters[id]===true;
+  for(const rule of filters.rules||[])if(metadata.fields.some(f=>f.key===rule.field))appendRule(rule,false);
+  updateTerritory();activeFilters();await search(1);
+  if(csrf&&version===sessionVersion)revealResults();
+}
+function renderCatalogCounts(data=metadata){
+  if(!metadata)return;
+  $('statRecords').textContent=fmt.format(metadata.total);$('statCategories').textContent=fmt.format(metadata.categories.length);$('statCities').textContent=fmt.format((metadata.cities||[]).length);$('statPriced').textContent=fmt.format(employers()?(metadata.jobsTotal||0):metadata.total-(metadata.missingPrice||0));
+  $('sourceCount').textContent=`${fmt.format(metadata.total)} ${employers()?'įmonių':'įrašų'} · ${metadata.fields.length} laukų`;
+  for(const niche of data.niches||[]){const counter=$('nicheCount-'+niche.id);if(counter)counter.textContent=fmt.format(niche.total);}
+  let note=$('liveCatalogNote');
+  if(!note){note=document.createElement('p');note.id='liveCatalogNote';note.className='live-catalog-note';document.querySelector('.stats').after(note);}
+  note.hidden=!employers();
+  note.textContent=employers()?`${fmt.format(metadata.importedJobsTotal??metadata.jobsTotal??0)} skelbimų iš importų · ${fmt.format(metadata.crawlerJobsTotal||0)} šiuo metu šaltiniuose skelbiamų crawlerio radinių.${metadata.liveStale?' Crawlerio atnaujinimas vėluoja; rodoma paskutinė gauta versija.':''}`:'';
+}
+async function refreshCatalogInfo(){
+  if(!csrf||!metadata||refreshInfoPending||document.visibilityState!=='visible')return false;
+  const version=sessionVersion,niche=currentNiche,serial=nicheSerial;refreshInfoPending=true;
+  try{
+    const data=await api('metadata?niche='+encodeURIComponent(niche));
+    if(!csrf||version!==sessionVersion||serial!==nicheSerial)return false;
+    metadata={...data,categories:[...new Set((data.categories||[]).map(categoryText).filter(Boolean))],fields:(data.fields||[]).filter(visibleField).map(f=>({...f,label:f.key==='category'?'Veiklos sritis':f.label}))};
+    renderCatalogCounts(data);
+    for(const [id,values]of [['category',metadata.categories],['employerType',metadata.employerTypes||[]],['contactStatus',metadata.contactStatuses||[]],['portal',metadata.portals||[]]]){const selected=$(id).value;addOptions(id,values);if(values.includes(selected))$(id).value=selected;}
+    if(employers())await search(page);
+    return true;
+  }catch{return false;/* Retry on the next status update while retaining verified numbers. */}
+  finally{refreshInfoPending=false;}
+}
+window.addEventListener('vip:crawler-status',event=>{
+  const status=event.detail?.status;if(!status)return;
+  const revision=JSON.stringify([status.lastRun,status.totalCompanies,status.totalJobs,status.contactCompanies]);
+  if(revision!==crawlerRevision)void refreshCatalogInfo().then(updated=>{if(updated)crawlerRevision=revision;});
+});
 async function search(targetPage=1,territoryAdjusted=false){
   if(!csrf||!metadata)return;activeFilters();clearTimeout(debounceId);const serial=++requestSerial,niche=currentNiche;pendingRequest?.abort();pendingRequest=new AbortController();
   $('loading').hidden=false;$('resultsBody').setAttribute('aria-busy','true');$('searchError').hidden=true;$('ruleCount').textContent=String(rules().length);
@@ -138,10 +186,18 @@ async function search(targetPage=1,territoryAdjusted=false){
     }
     rows=result.records;page=result.page;pages=result.pages;$('resultCount').textContent=fmt.format(result.total);$('mobileResultCount').textContent=fmt.format(result.total);$('unitNotice').hidden=employers()||!result.mixedUnits;
     $('emptyState').hidden=result.total!==0;$('resultsTable').hidden=result.total===0;$('pageInfo').textContent=result.total?`${(page-1)*result.pageSize+1}–${Math.min(page*result.pageSize,result.total)} iš ${fmt.format(result.total)}`:'0 įrašų';
-    $('previousPage').disabled=page<=1;$('nextPage').disabled=page>=pages;renderRows();
+    $('previousPage').disabled=page<=1;$('nextPage').disabled=page>=pages;renderRows();publishResults(result.total,result.pageSize);
   }catch(error){if(error.name!=='AbortError'&&serial===requestSerial){$('searchError').textContent=error.message;$('searchError').hidden=false;}}
   finally{if(serial===requestSerial){$('loading').hidden=true;$('resultsBody').setAttribute('aria-busy','false');}}
 }
+function publishResults(total=Number($('resultCount').textContent.replace(/\D/g,''))||rows.length,pageSize=Number($('pageSize').value)){
+  window.dispatchEvent(new CustomEvent('vip:results',{detail:{records:rows,currentNiche,total,page,pageSize}}));
+}
+window.addEventListener('vip:open-record',event=>{if(csrf&&!$('appView').hidden)void detail(event.detail?.id);});
+window.addEventListener('vip:select-city',event=>{
+  const city=event.detail?.city;if(!csrf||!metadata||!metadata.cities.includes(city))return;
+  addOptions('city',metadata.cities);$('city').value=city;updateTerritory();void search(1);
+});
 function phoneCell(record){
   const phones=splitValues(record.company_phone),first=phones[0],url=phoneURL(first);if(!first)return'<span class="no-value">Telefonas nenurodytas</span>';
   return `${url?`<a class="phone-link" href="${esc(url)}">${esc(first)}</a>`:`<span class="phone-link">${esc(first)}</span>`}${phones.length>1?`<button type="button" class="contact-more" data-record="${esc(record.id)}">+${phones.length-1} kiti numeriai</button>`:''}<button type="button" class="phone-copy" data-copy="${esc(record.id)}">Kopijuoti</button>`;
@@ -168,6 +224,7 @@ function renderDetail(record,employer,fields){
   const jobSection=employer?`<details class="detail-section jobs-section"><summary>Darbo skelbimai <span class="badge">${fmt.format(jobs.length)}</span></summary>${jobs.length?`<ul class="job-list">${jobs.map(job=>{const url=webURL(job.url);return`<li><strong>${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(job.title||'Darbo skelbimas')} ↗</a>`:esc(job.title||'Darbo skelbimas')}</strong><span>${[job.city_area,job.portal].filter(Boolean).map(esc).join(' · ')}</span></li>`;}).join('')}</ul>`:'<p class="field-note">Darbo skelbimų nuorodų nepateikta.</p>'}</details>`:'';
   const contactSection=employer&&contacts.length?`<details class="detail-section"><summary>Kontaktų šaltiniai <span class="badge">${fmt.format(contacts.length)}</span></summary><ul class="contact-source-list">${contacts.map(contact=>{const kind=/mail|pašt/i.test(contact.type)?'email':/phone|tel/i.test(contact.type)?'phone':String(contact.value||'').includes('@')?'email':'phone',url=webURL(contact.url);return`<li><span class="contact-kind">${kind==='email'?'El. paštas':'Telefonas'}</span><div>${linkedValues(contact.value,kind)}</div>${url?`<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Kontaktų šaltinis ↗</a>`:''}</li>`;}).join('')}</ul></details>`:'';
   $('detailContent').innerHTML=`<h2 id="detailTitle" class="detail-title">${esc(record.provider)}</h2>${category?`<p class="detail-category">${esc(category)}</p>`:''}${employer?`<p class="detail-job-total"><strong>${fmt.format(Number(record.jobs_count)||jobs.length)}</strong> darbo skelbimų</p>`:`<div class="detail-price">${typeof record.price_value==='number'?esc(record.price_raw):'Kaina nenurodyta'}</div>`}<div class="detail-actions">${phone?`<a class="primary" href="${esc(phone)}">Skambinti</a>`:''}${email?`<a class="subtle" href="${esc(email)}">Rašyti el. laišką</a>`:''}${profile?`<a class="subtle" href="${esc(profile)}" target="_blank" rel="noopener noreferrer">${employer?'Įmonės svetainė':'Atidaryti profilį'} ↗</a>`:''}</div><dl class="detail-fields">${details}</dl>${jobSection}${contactSection}`;
+  window.dispatchEvent(new CustomEvent('vip:detail-ready',{detail:{record,employer,container:$('detailContent')}}));
 }
 async function detail(id){
   const record=rows.find(r=>String(r.id)===String(id));if(!record||!metadata)return;
@@ -207,16 +264,19 @@ function configureRule(row,fieldChanged=false){
   if(op.selectedOptions[0]?.disabled)op.value='contains';
   const value=row.querySelector('.rule-value');value.disabled=['missing','present'].includes(op.value);value.type=['gte','lte'].includes(op.value)?'number':'text';value.step='any';value.inputMode=isNumber?'decimal':field==='company_phone'?'tel':field==='company_email'?'email':field.endsWith('_url')?'url':'text';value.enterKeyHint='search';value.autocapitalize='none';value.placeholder=value.disabled?'Reikšmės nereikia':isNumber?'Skaičius arba tekstas':'Įveskite reikšmę';if(fieldChanged)value.value='';
 }
-$('addRule').addEventListener('click',()=>{
+function appendRule(snapshot=null,focus=true){
   if(!metadata)return;if($('rules').children.length>=30){toast('Galima pridėti iki 30 filtrų.');return;}
-  const row=document.createElement('div');row.className='rule-row';row.innerHTML=`<select class="rule-field" aria-label="Duomenų laukas">${metadata.fields.map(f=>`<option value="${esc(f.key)}"${f.key==='provider'?' selected':''}>${esc(f.label)}</option>`).join('')}</select><select class="rule-op" aria-label="Filtro sąlyga">${operators.map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select><input class="rule-value" aria-label="Filtro reikšmė" placeholder="Įveskite reikšmę" maxlength="500"><button type="button" class="subtle remove-rule" aria-label="Pašalinti filtrą">✕</button>`;$('rules').append(row);configureRule(row);row.querySelector('.rule-value').focus();
-});
+  const row=document.createElement('div');row.className='rule-row';row.innerHTML=`<select class="rule-field" aria-label="Duomenų laukas">${metadata.fields.map(f=>`<option value="${esc(f.key)}"${f.key==='provider'?' selected':''}>${esc(f.label)}</option>`).join('')}</select><select class="rule-op" aria-label="Filtro sąlyga">${operators.map(([key,label])=>`<option value="${key}">${label}</option>`).join('')}</select><input class="rule-value" aria-label="Filtro reikšmė" placeholder="Įveskite reikšmę" maxlength="500"><button type="button" class="subtle remove-rule" aria-label="Pašalinti filtrą">✕</button>`;$('rules').append(row);
+  if(snapshot){row.querySelector('.rule-field').value=snapshot.field;row.querySelector('.rule-op').value=snapshot.op;row.querySelector('.rule-value').value=String(snapshot.value??'');}
+  configureRule(row);if(focus)row.querySelector('.rule-value').focus();
+}
+$('addRule').addEventListener('click',()=>appendRule());
 $('rules').addEventListener('click',event=>{if(event.target.closest('.remove-rule')){event.target.closest('.rule-row').remove();search(1);$('addRule').focus();}});
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');let effects=!reduced.matches;
 try{if(localStorage.getItem('vip.effects')==='off')effects=false;}catch{}
 function renderEffects(){document.body.classList.toggle('effects-off',!effects);$('effectsToggle').setAttribute('aria-pressed',String(effects));$('effectsToggle').title=effects?'Išjungti neoninius efektus':'Įjungti neoninius efektus';}
 renderEffects();$('effectsToggle').addEventListener('click',()=>{effects=!effects;try{localStorage.setItem('vip.effects',effects?'on':'off');}catch{}renderEffects();});reduced.addEventListener('change',event=>{if(event.matches){effects=false;renderEffects();}});
-// Only visual preferences are stored. Contacts, passwords and sessions never go to localStorage.
+// Saved filters and preferences stay in this browser; records, passwords and sessions are never persisted.
 startOnEntry();
 if(!staticClient){
   const bootstrapVersion=sessionVersion;

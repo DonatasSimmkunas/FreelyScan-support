@@ -45,12 +45,12 @@ test('exact-origin static client authenticates with a revocable bearer without c
     response=await fetch(base+'/vip/api/session',{headers});assert.equal(response.status,200);checkAllowed(response);
     assert.deepEqual(await response.json(),{username:'verification',csrf:login.csrf});
     response=await fetch(base+'/vip/api/metadata',{headers});assert.equal(response.status,200);
-    const metadata=await response.json();assert.equal(metadata.total,4500);assert.equal(metadata.fields.length,19);
+    const metadata=await response.json();assert.equal(metadata.total,5217);assert.equal(metadata.fields.length,22);
     response=await fetch(base+'/vip/api/metadata',{headers:{...headers,Origin:evil}});assert.equal(response.status,403);
     response=await post('search',{},headers);assert.equal(response.status,403);
     response=await post('search',{}, {...headers,'X-VIP-CSRF':'wrong'});assert.equal(response.status,403);
     response=await post('search',{pageSize:25},{...headers,'X-VIP-CSRF':login.csrf});assert.equal(response.status,200);checkAllowed(response);
-    const results=await response.json();assert.equal(results.total,4500);assert.equal(results.records.length,25);
+    const results=await response.json();assert.equal(results.total,5217);assert.equal(results.records.length,25);
     response=await post('login',{username:'verification',password});assert.equal(response.status,200);
     const cookie=response.headers.get('set-cookie');assert.ok(cookie);assert.equal((await response.json()).accessToken,undefined);
     response=await fetch(base+'/vip/api/session',{headers:{Origin:origin,Cookie:cookie,Authorization:'Bearer invalid'}});assert.equal(response.status,401);

@@ -1,0 +1,24 @@
+:root{--city-x:0;--city-y:0}
+#ambientBackground{perspective:1000px;perspective-origin:50% 52%}
+#ambientBackground .photo-city{translate:calc(var(--city-x)*-10px) calc(var(--city-y)*-7px);transition:translate .6s ease-out}
+#ambientBackground .photo-portrait{translate:calc(var(--city-x)*-23px) calc(var(--city-y)*-13px);transition:translate .7s ease-out}
+#ambientBackground .ambient-particles{translate:calc(var(--city-x)*-38px) calc(var(--city-y)*-20px);transition:translate .8s ease-out}
+.login-art>img,.portrait-atmosphere{translate:calc(var(--city-x)*-9px) calc(var(--city-y)*-6px);transition:translate .65s ease-out}
+.login-art .art-caption{translate:calc(var(--city-x)*4px) calc(var(--city-y)*2px);transition:translate .8s ease-out}
+#ambientBackground .city-depth-floor{inset:58% -40% -80%;z-index:1;opacity:.18;transform-origin:50% 0;transform:rotateX(65deg) translate3d(calc(var(--city-x)*-20px),0,-40px);background-image:linear-gradient(#b7ff492b 1px,transparent 1px),linear-gradient(90deg,#c296ff35 1px,transparent 1px);background-size:110px 110px;mask-image:linear-gradient(transparent,#000 24%,transparent 86%);animation:depth-travel 20s linear infinite;transition:transform .8s ease-out;pointer-events:none}
+@keyframes depth-travel{from{background-position:0 0}to{background-position:0 110px}}
+.terminal-sound-toggle{min-height:44px}.terminal-sound-toggle[aria-pressed="false"]{color:#7e8f76}.terminal-sound-toggle .ui-icon{width:17px;height:17px}
+.terminal-boot[hidden]{display:none!important}
+.terminal-boot{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:20px;background:#040a08c9;pointer-events:none;animation:terminal-arrive .18s ease-out both}
+.terminal-boot-card{width:min(430px,100%);padding:28px;border:1px solid #a2d44580;border-radius:14px;background:linear-gradient(145deg,#15241cec,#0c111bee);box-shadow:0 0 85px #a1f12618,0 18px 100px #0008;font-family:var(--font-display);overflow:hidden}
+.terminal-boot-kicker{display:block;color:#b299d6;font-size:.65rem;letter-spacing:.18em;margin-bottom:18px}
+.terminal-boot-card>strong{display:block;color:#d0ff9b;font-size:clamp(1.15rem,5vw,1.55rem);font-weight:600;letter-spacing:-.035em}.terminal-boot-card>strong>span{color:#b2ec49}
+.terminal-boot-lines{display:grid;gap:10px;margin:25px 0;color:#a4b69c;font-size:.72rem}
+.terminal-boot-lines>span{display:flex;justify-content:space-between;gap:10px;animation:terminal-line .15s ease-out both}
+.terminal-boot-lines>span:nth-child(2){animation-delay:.25s}.terminal-boot-lines>span:nth-child(3){animation-delay:.5s}.terminal-boot-lines b{font-weight:500;color:#c5ff72}
+.terminal-boot-progress{height:2px;transform-origin:left;background:linear-gradient(90deg,#beed58,#be9dea);animation:terminal-ready 1s ease-out both}
+@keyframes terminal-arrive{from{opacity:0}to{opacity:1}}@keyframes terminal-line{from{opacity:0;translate:0 5px}to{opacity:1;translate:0 0}}@keyframes terminal-ready{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:650px){#ambientBackground .city-depth-floor{opacity:.12;background-size:140px 140px;animation-duration:28s}.terminal-boot-card{padding:24px}.global-controls{gap:6px;flex-wrap:wrap}.terminal-sound-toggle{font-size:.7rem;padding:8px 10px}}
+body.effects-off #ambientBackground .city-depth-floor{display:none}
+body.effects-off #ambientBackground :is(.photo-city,.photo-portrait,.ambient-particles),body.effects-off .login-art :is(img,.portrait-atmosphere,.art-caption){translate:none!important}
+@media(prefers-reduced-motion:reduce){#ambientBackground .city-depth-floor{display:none}#ambientBackground :is(.photo-city,.photo-portrait,.ambient-particles),.login-art :is(img,.portrait-atmosphere,.art-caption){translate:none!important;transition:none!important}.terminal-boot{display:none!important}}

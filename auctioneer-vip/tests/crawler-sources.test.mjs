@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {SOURCE_DEFINITIONS, fetchRegistryBatch, fetchVacanciesBatch, fetchCareerBatch} from '../lib/crawler-sources.mjs';
+import {SOURCE_DEFINITIONS, CAREER_BOARD_SOURCES, fetchCareerBoardBatch, fetchRegistryBatch, fetchVacanciesBatch, fetchCareerBatch} from '../lib/crawler-sources.mjs';
 
 const NOW = new Date('2026-09-27T12:00:00Z');
 const response = (data, modified = 'Sun, 27 Sep 2026 08:00:00 GMT') => new Response(JSON.stringify(data), {headers: {'content-type': 'application/json', ...(modified ? {'last-modified': modified} : {})}});
@@ -158,7 +158,8 @@ test('Ashby handles secondary Lithuanian locations and excludes unlisted jobs', 
   assert.equal(result.jobs[0].city_area, 'Kaunas');
   assert.equal(result.companies[0].provider, 'Hostinger');
   assert.equal(result.nextCursor, null);
-  assert.equal(SOURCE_DEFINITIONS.length, 3);
+  assert.ok(SOURCE_DEFINITIONS.every(source=>!['rc_registry','uzt_vacancies'].includes(source.id)));
+  assert.equal(SOURCE_DEFINITIONS.length,CAREER_BOARD_SOURCES.length+1);
 });
 
 test('malformed cursor/schema and HTTP failures fail closed without retries or auth forwarding', async () => {
@@ -176,4 +177,25 @@ test('malformed cursor/schema and HTTP failures fail closed without retries or a
   await assert.rejects(fetchVacanciesBatch({fetchImpl: async () => new Response('<html>no JSON</html>')}), {code: 'source_invalid_json'});
   const signal = AbortSignal.abort();
   await assert.rejects(fetchVacanciesBatch({signal, fetchImpl: async (_url, options) => { assert.equal(options.signal.aborted, true); throw new Error('aborted'); }}), {code: 'source_aborted'});
+});
+
+
+test('new career boards are fixed, independently paginated and restricted to Lithuanian listed roles',async()=>{
+  const board=CAREER_BOARD_SOURCES.find(item=>item.type==='lever');
+  assert.ok(board);let calls=0;
+  const options={boardId:board.id,limit:1,now:NOW,fetchImpl:async url=>{
+    calls++;assert.equal(url,board.api);return response([
+      leverJob('first',{hostedUrl:`https://${board.jobHost}${board.path}first`}),
+      leverJob('second',{hostedUrl:`https://${board.jobHost}${board.path}second`}),
+      leverJob('talent',{text:'Join our talent pool',hostedUrl:`https://${board.jobHost}${board.path}talent`}),
+      leverJob('future',{text:'Apply Here: Future Product & Engineering Leadership Roles!',hostedUrl:`https://${board.jobHost}${board.path}future`}),
+      leverJob('general',{text:'Didn’t Find Your Role? Apply Here!',hostedUrl:`https://${board.jobHost}${board.path}general`}),
+      leverJob('foreign',{country:'DE',categories:{location:'Berlin'},hostedUrl:`https://${board.jobHost}${board.path}foreign`}),
+      leverJob('evil',{hostedUrl:'https://evil.example/any'})
+    ]);
+  }};
+  const first=await fetchCareerBoardBatch(options);assert.equal(first.sourceId,board.id);assert.equal(first.jobs.length,1);assert.match(first.nextCursor,new RegExp('^board:'+board.id+':1$'));
+  const second=await fetchCareerBoardBatch({...options,cursor:first.nextCursor});assert.equal(second.jobs.length,1);assert.notEqual(first.jobs[0].source_job_id,second.jobs[0].source_job_id);assert.equal(second.nextCursor,null);
+  await assert.rejects(fetchCareerBoardBatch({...options,boardId:'https://evil.example'}),/Nežinomas/);
+  await assert.rejects(fetchCareerBoardBatch({...options,cursor:'board:other:1'}),/žymeklis/);assert.equal(calls,2);
 });

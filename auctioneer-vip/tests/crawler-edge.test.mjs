@@ -6,9 +6,10 @@ const env=name=>({SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_RO
 const req=(body,headers={})=>new Request('https://project.supabase.co/functions/v1/vip-crawler',{method:'POST',headers:{'Content-Type':'application/json','X-VIP-Crawler-Token':token,...headers},body:JSON.stringify(body)});
 const json=(body,status=200)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json'}});
 
-test('reported next run follows UTC six-hour cron boundaries, including exact ticks and day rollover',()=>{
-  assert.equal(nextScheduledRun(Date.parse('2026-09-27T07:43:00Z')),'2026-09-27T12:00:00.000Z');
-  assert.equal(nextScheduledRun(Date.parse('2026-09-27T06:00:00Z')),'2026-09-27T12:00:00.000Z');
+test('reported next run follows UTC quarter-hour cron boundaries all day, including exact ticks and rollover',()=>{
+  assert.equal(nextScheduledRun(Date.parse('2026-09-27T07:43:00Z')),'2026-09-27T07:45:00.000Z');
+  assert.equal(nextScheduledRun(Date.parse('2026-09-27T06:00:00Z')),'2026-09-27T06:15:00.000Z');
+  assert.equal(nextScheduledRun(Date.parse('2026-09-27T07:45:00Z')),'2026-09-27T08:00:00.000Z');
   assert.equal(nextScheduledRun(Date.parse('2026-09-27T23:59:59Z')),'2026-09-28T00:00:00.000Z');
 });
 
@@ -80,4 +81,26 @@ test('blocked sources are never fetched or advanced while permitted career colle
   assert.deepEqual(states.slice(0,2),blockedBefore);assert.deepEqual(sourceWrites,[]);
   assert.equal(ingests.length,1);assert.equal(ingests[0].p_source,'company_careers');assert.equal(ingests[0].p_jobs.length,1);
   assert.equal(runSummary.status,'partial');assert.deepEqual(runSummary.summary.map(s=>[s.id,s.status]),[['rc_registry','blocked'],['uzt_vacancies','blocked'],['company_careers','ok']]);
+});
+
+test('independent sources retire denied access, honor Retry-After and retain successful writes',async()=>{
+  const states=[{id:'denied',status:'idle'},{id:'healthy',status:'idle'},{id:'throttled',status:'idle'},{id:'retired',status:'removed'}];
+  let now=Date.parse('2026-09-28T00:00:00Z'),deniedCalls=0,throttledCalls=0,retiredCalls=0,healthyCalls=0,summary;const saved=[];
+  const fetchImpl=async(raw,options={})=>{
+    const url=new URL(raw),path=url.pathname,body=options.body?JSON.parse(options.body):null;
+    if(path.endsWith('/vip_crawler_control'))return body.lease_owner?json([{id:1}]):new Response(null,{status:204});
+    if(path.endsWith('/vip_crawler_sources')&&options.method==='GET')return json(states);
+    if(path.endsWith('/vip_crawler_sources')&&options.method==='PATCH'){Object.assign(states.find(source=>source.id===url.searchParams.get('id').slice(3)),body);assert.ok(!('cursor' in body));return new Response(null,{status:204});}
+    if(path.endsWith('/vip_crawler_runs')){if(options.method==='PATCH')summary=body;return new Response(null,{status:204});}
+    if(path.endsWith('/rpc/vip_crawler_ingest')){saved.push(body);return json({newCompanies:1,companiesSeen:1,jobsSeen:1});}
+    if(path.endsWith('/rpc/vip_crawler_status'))return json({running:false,totalCompanies:saved.length});
+    throw new Error('Unexpected request');
+  };
+  const sources=[['denied',async()=>{deniedCalls++;throw Object.assign(new Error('Forbidden'),{code:'source_http_error',status:403});}],['healthy',async()=>{healthyCalls++;return{sourceId:'healthy',status:'ok',companies:[{provider:'Public Employer'}],jobs:[]};}],['throttled',async()=>{throttledCalls++;throw Object.assign(new Error('Slow down'),{code:'source_http_error',status:429,retryAfter:3600});}],['retired',async()=>{retiredCalls++;throw new Error('Must not fetch');}]];
+  const handler=createCrawlerHandler({env,tokenSha256,fetchImpl,sources,now:()=>now});
+  assert.equal((await handler(req({action:'run'}))).status,200);assert.equal(summary.status,'partial');
+  assert.equal(states[0].status,'removed');assert.equal(states[2].retry_after,'2026-09-28T01:00:00.000Z');assert.equal(saved.length,1);
+  now+=120000;assert.equal((await handler(req({action:'run'}))).status,200);
+  assert.equal(deniedCalls,1);assert.equal(throttledCalls,1);assert.equal(retiredCalls,0);assert.equal(healthyCalls,2);assert.equal(saved.length,2);
+  assert.deepEqual(Object.fromEntries(summary.summary.map(item=>[item.id,item.status])),{healthy:'ok',retired:'removed',denied:'removed',throttled:'cooldown'});
 });

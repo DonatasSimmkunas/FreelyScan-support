@@ -10,6 +10,11 @@ export const FIELDS = [
   ['detected_provider','Aptiktas teikėjo pavadinimas','text'],['is_business','Įmonės žyma šaltinyje (0 / 1)','number'],
   ['contact_source_url','Kontaktų šaltinio nuoroda','text']
 ].map(([key,label,type])=>({key,label,type}));
+const IMPORT_FIELDS=[
+  ['additional_source_url','Papildomas šaltinis'],
+  ['data_basis','Duomenų pagrindas'],
+  ['source_notes','Šaltinio pastabos']
+].map(([key,label])=>({key,label,type:'text'}));
 export const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('lt').trim();
 export function cleanCategory(value){
   const text=String(value??'').trim();
@@ -25,11 +30,12 @@ const safeNum = (value, name) => { if(absent(value)) return null; const n=Number
 export function createCatalog(records) {
   // Remove misclassified dates and labels from presentation without deleting contacts.
   records=records.map(record=>({...record,category:cleanCategory(record.category)}));
+  const fields=[...FIELDS,...IMPORT_FIELDS.filter(field=>records.some(record=>!absent(record[field.key])))];
   const entries=records.map(record=>({record,city:String(record.city_area||'').split(',')[0].trim(),
     nationwide:normalize(record.city_area).includes('visa lietuva'),radius:Number(String(record.city_area||'').match(/\+(\d+)\s*km/)?.[1]||0),
     index:normalize(Object.values(record).join(' '))}));
   const distinct = key=>[...new Set(records.map(r=>r[key]).filter(v=>!absent(v)))].sort((a,b)=>collator.compare(String(a),String(b)));
-  const metadata={total:records.length,source:'rezultatai.xlsx',fields:FIELDS,categories:distinct('category'),units:distinct('price_unit'),
+  const metadata={total:records.length,source:'Paslaugų teikėjų importai',fields,categories:distinct('category'),units:distinct('price_unit'),
     cities:[...new Set(entries.map(e=>e.city).filter(Boolean))].sort(collator.compare),
     missingPrice:records.filter(r=>!numeric(r.price_value)).length,missingPhone:records.filter(r=>absent(r.company_phone)).length,
     missingEmail:records.filter(r=>absent(r.company_email)).length,
@@ -42,8 +48,8 @@ export function createCatalog(records) {
     const rules=Array.isArray(input.rules)?input.rules:[];
     if(rules.length>30) throw new Error('Galima naudoti iki 30 papildomų filtrų.');
     for(const r of rules) {
-      if(!FIELDS.some(f=>f.key===r.field)||!OPS.has(r.op)) throw new Error('Nežinomas filtras.');
-      if(['gte','lte'].includes(r.op) && (!FIELDS.some(f=>f.key===r.field&&f.type==='number') || safeNum(r.value,r.field)===null)) throw new Error('Skaitiniam filtrui reikia skaičiaus.');
+      if(!fields.some(f=>f.key===r.field)||!OPS.has(r.op)) throw new Error('Nežinomas filtras.');
+      if(['gte','lte'].includes(r.op) && (!fields.some(f=>f.key===r.field&&f.type==='number') || safeNum(r.value,r.field)===null)) throw new Error('Skaitiniam filtrui reikia skaičiaus.');
       if(String(r.value??'').length>500) throw new Error('Per ilga filtro reikšmė.');
     }
     const matchRule=(record,rule)=>{

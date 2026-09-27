@@ -61,3 +61,10 @@ test('territory options contain only matches under the other active filters',()=
   assert.deepEqual(catalog.search({q:'not-present'}).availableCities,[]);
   assert.deepEqual(catalog.search({city:'Vilnius',withEmail:true,includeNationwide:true}).availableCities,['Kaunas','Vilnius']);
 });
+test('import provenance remains searchable and filterable without creating empty optional fields',()=>{
+  const imported=createCatalog([...data,{...base,id:5,provider:'Naujas teikėjas',data_basis:'Svetainė',additional_source_url:'https://example.com/kontaktai',source_notes:'Papildomai patikslinti paslaugos apimtį.'}]);
+  assert.equal(catalog.metadata.fields.length,19);
+  assert.equal(imported.metadata.fields.length,22);
+  assert.equal(imported.search({q:'patikslinti'}).records[0].id,5);
+  assert.equal(imported.search({rules:[{field:'data_basis',op:'eq',value:'Svetainė'}]}).total,1);
+});

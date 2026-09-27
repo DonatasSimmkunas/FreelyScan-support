@@ -1,0 +1,7 @@
+.env*
+!.env.example
+node_modules/
+private/*.json
+private/*.env
+*.log
+screenshots/

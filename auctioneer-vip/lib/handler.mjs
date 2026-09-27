@@ -19,6 +19,8 @@ const HEADERS={
   'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com; media-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   'Permissions-Policy':'camera=(), microphone=(), geolocation=()'
 };
+const CORS_METHODS=new Set(['GET','POST','OPTIONS']);
+const CORS_HEADERS=new Set(['content-type','authorization','x-vip-csrf','x-vip-client']);
 async function jsonBody(req){
   if(!(req.headers['content-type']||'').startsWith('application/json'))throw new Error('Reikia JSON užklausos.');
   let size=0;const chunks=[];for await(const chunk of req){size+=chunk.length;if(size>32_768)throw new Error('Užklausa per didelė.');chunks.push(chunk);}
@@ -37,29 +39,50 @@ export async function createVipHandler(env=process.env){
   const catalog=createCatalog(JSON.parse(Buffer.concat([decipher.update(encrypted.subarray(32)),decipher.final()]).toString('utf8')));
   const assets=new Map(await Promise.all(Object.entries(PUBLIC_FILES).map(async([url,[file,type]])=>[url,{body:await readFile(path.join(root,'public',file)),type}])));
   return async function vipHandler(req,res){
-    const send=(status,data,type='application/json; charset=utf-8',extra={})=>{res.writeHead(status,{...HEADERS,'Content-Type':type,...extra});res.end(req.method==='HEAD'?undefined:(type.startsWith('application/json')?JSON.stringify(data):data));};
+    let cors={};
+    const send=(status,data,type='application/json; charset=utf-8',extra={})=>{res.writeHead(status,{...HEADERS,...cors,'Content-Type':type,...extra});res.end(req.method==='HEAD'?undefined:(type.startsWith('application/json')?JSON.stringify(data):data));};
     try{
       const url=new URL(req.url,'http://local');
       if(url.pathname!=='/vip'&&!url.pathname.startsWith('/vip/'))return false;
       if(url.pathname==='/vip'){send(308,'','text/plain',{Location:'/vip/'});return true;}
       if(assets.has(url.pathname)&&['GET','HEAD'].includes(req.method)){const a=assets.get(url.pathname);send(200,a.body,a.type);return true;}
       if(!url.pathname.startsWith('/vip/api/')){send(404,{error:'Nerasta.'});return true;}
+      cors={Vary:'Origin'};
+      if(req.headers.origin!==undefined&&req.headers.origin!==origin){send(403,{error:'Užklausa atmesta.'});return true;}
+      if(req.headers.origin===origin)cors['Access-Control-Allow-Origin']=origin;
+      if(req.method==='OPTIONS'){
+        const method=req.headers['access-control-request-method'];
+        const rawHeaders=req.headers['access-control-request-headers'];
+        const requestedHeaders=rawHeaders===undefined?[]:typeof rawHeaders==='string'?rawHeaders.split(',').map(h=>h.trim().toLowerCase()):[''];
+        if(req.headers.origin!==origin||!CORS_METHODS.has(method)||requestedHeaders.some(h=>!CORS_HEADERS.has(h))){send(403,{error:'Užklausa atmesta.'});return true;}
+        send(204,'','text/plain; charset=utf-8',{
+          'Access-Control-Allow-Methods':'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers':'Content-Type, Authorization, X-VIP-CSRF, X-VIP-Client',
+          Vary:'Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+        });return true;
+      }
       if(req.method==='POST'&&req.headers.origin!==origin){send(403,{error:'Užklausa atmesta.'});return true;}
       if(url.pathname==='/vip/api/login'&&req.method==='POST'){
         const body=await jsonBody(req);
         const ip=env.VIP_TRUSTED_IP_HEADER?String(req.headers[env.VIP_TRUSTED_IP_HEADER.toLowerCase()]||req.socket.remoteAddress).split(',')[0]:req.socket.remoteAddress;
         const result=await auth.login(body.username,body.password,ip);
-        if(result.status===200)send(200,{username:result.session.username,csrf:result.session.csrf},undefined,{'Set-Cookie':result.cookie});
+        if(result.status===200){
+          const staticClient=req.headers['x-vip-client']==='static';
+          send(200,{username:result.session.username,csrf:result.session.csrf,...(staticClient?{accessToken:result.token}:{})},undefined,staticClient?{}:{'Set-Cookie':result.cookie});
+        }
         else send(result.status,{error:result.status===429?'Per daug bandymų. Pabandykite vėliau.':'Neteisingas vartotojo vardas arba slaptažodis.'},undefined,result.retryAfter?{'Retry-After':String(result.retryAfter)}:{});
         return true;
       }
-      const s=auth.session(req.headers.cookie);
+      const s=auth.session(req.headers.cookie,req.headers.authorization);
       if(!s){send(401,{error:'Prisijunkite, kad matytumėte duomenis.'});return true;}
       if(req.method==='POST'&&!auth.csrfValid(s,req.headers['x-vip-csrf'])){send(403,{error:'Sesija neatitinka. Prisijunkite iš naujo.'});return true;}
       if(url.pathname==='/vip/api/session'&&req.method==='GET')send(200,{username:s.username,csrf:s.csrf});
       else if(url.pathname==='/vip/api/metadata'&&req.method==='GET')send(200,catalog.metadata);
       else if(url.pathname==='/vip/api/search'&&req.method==='POST')send(200,catalog.search(await jsonBody(req)));
-      else if(url.pathname==='/vip/api/logout'&&req.method==='POST')send(200,{ok:true},undefined,{'Set-Cookie':auth.logout(s)});
+      else if(url.pathname==='/vip/api/logout'&&req.method==='POST'){
+        const cookie=auth.logout(s);
+        send(200,{ok:true},undefined,req.headers.authorization===undefined?{'Set-Cookie':cookie}:{});
+      }
       else send(404,{error:'Nerasta.'});
     }catch(error){send(400,{error:error instanceof SyntaxError||error.code==='ERR_INVALID_URL'?'Neteisingas užklausos formatas.':String(error.message||'Užklausa nepavyko.').slice(0,200)});}
     return true;

@@ -1,13 +1,13 @@
 # Auctioneer VIP
 
-Papildomas `/vip` modulis esamai `auctioneer.it.com` svetainei. Pagrindinio puslapio failai nebuvo keičiami. Esama svetainė yra Render Static Site, diegiama iš `auctioneer-site` šakos katalogo `auctioneer`. VIP serveris diegiamas atskirai iš `auctioneer-vip` šakos; pagrindinės svetainės šaka ir failai nekeičiami. Atskiras serveris paskelbtas `https://auctioneer-vip.onrender.com` (Render paslauga `srv-dasnvkojo6nc73cks2b0`). Pagrindinio domeno `/vip` maršrutai dar neprijungti: jų nustatymui reikia prisijungimo prie Render valdymo skydelio.
+Papildomas `/vip` modulis esamai `auctioneer.it.com` svetainei. Esamoje `auctioneer-site` šakoje pridedamas tik naujas `auctioneer/vip` aplankas su vieša sąsaja. Ankstesni svetainės failai, meniu ir pagrindinis puslapis nekeičiami. Duomenis ir slaptažodį tikrina atskiras Render Node serveris `https://auctioneer-vip.onrender.com`, diegiamas iš `auctioneer-vip` šakos. Galutinė patikra atliekama po abiejų diegimų.
 
 Privatus pristatymo archyvas turi vietinio paleidimo konfigūraciją su slaptažodžio maiša ir duomenų iššifravimo raktu. Archyvo, jo konfigūracijos ir `private` katalogo negalima pateikti per statinių failų serverį. `.gitignore` neleidžia konfigūracijai patekti į Git. Pati slaptažodžio tekstinė reikšmė archyve nesaugoma.
 
 ## Paruoštos funkcijos
 
 - Prisijungimas vartotojo vardu ir slaptažodžiu, serverio patikra, scrypt slaptažodžio maiša.
-- HttpOnly, SameSite=Strict sesija; Secure slapukas produkcijoje. 30 min. neveiklumo ir 8 val. maksimali sesijos trukmė.
+- Produkcijos sąsajoje sesijos prieigos žetonas laikomas tik naršyklės atmintyje, perduodamas Authorization antrašte. Atnaujinus puslapį reikia prisijungti iš naujo. 30 min. neveiklumo ir 8 val. maksimali sesijos trukmė. Slapukų režimas paliktas vietiniam arba same-origin naudojimui.
 - Apriboti neteisingo prisijungimo bandymai, Origin ir CSRF patikra.
 - Visi 4 500 originalių įrašų ir 19 originalių laukų. Duomenys perduodami tik prisijungus; viešuose JavaScript failuose jų nėra.
 - Paieška visuose laukuose, kategorija, 56 vietovės, visa Lietuva arba šaltinyje nurodyta aptarnavimo zona.
@@ -16,7 +16,7 @@ Privatus pristatymo archyvas turi vietinio paleidimo konfigūraciją su slaptaž
 - Rezultatų lentelė, mobilios kortelės, visos originalios informacijos langas, telefonas, el. paštas ir šaltinių nuorodos.
 - Cyberpunk prisijungimo iliustracija, lėti neoniniai efektai, jų išjungimas ir reduced-motion palaikymas.
 - Vartotojo pasirinkta „Under Your Spell — Desire (Drive)“ per oficialų YouTube įterpimą; kartojimas, atkūrimas abiejuose ekranuose.
-- `noindex`, `nofollow`, `noarchive`, `no-store`, CSP, draudimas įterpti VIP puslapį į kitos svetainės iframe.
+- Viešos sąsajos `noindex`, `nofollow`, `noarchive` ir griežta CSP. Privatūs API atsakymai naudoja `no-store`; leidžiama tik tiksli `https://auctioneer.it.com` kilmė, CORS be wildcard ar Allow-Credentials.
 
 ## Duomenų pastabos
 
@@ -42,24 +42,17 @@ Konfigūracijos kūrimo skriptas `scripts/configure.mjs` priima JSON per stdin: 
 
 ## Integracija, išsaugant seną svetainę
 
-Jei esamas serveris naudoja Node, VIP handlerį įterpkite prieš dabartinį maršrutų arba statinių failų handlerį:
+Į statinės svetainės `auctioneer/vip/` katalogą kopijuojami tik šeši failai iš `public/`: index.html, app.js, styles.css, music.js, favicon.svg ir login-art.png. Nei užšifruotas katalogas, nei serverio kodas, konfigūracija, slaptažodžio maiša ar duomenų raktas čia nepatenka. Nuoroda nepridedama į pagrindinį meniu ar sitemap.
 
-```js
-import { createVipHandler } from './auctioneer-vip/lib/handler.mjs';
-const vip = await createVipHandler(process.env);
+Statinė sąsaja kreipiasi į `https://auctioneer-vip.onrender.com/vip/api/` su `credentials: omit`. Prisijungimas su `X-VIP-Client: static` grąžina atsitiktinį prieigos žetoną tik po sėkmingos serverio patikros; kiekviena duomenų užklausa jį siunčia kaip `Authorization: Bearer …`. Žetonas nesaugomas localStorage, sessionStorage, URL ar diske. Prisijungimą reikia pakartoti atnaujinus puslapį. POST užklausoms papildomai tikrinami Origin ir CSRF. Kitų svetainių kilmės ir neleistinos preflight antraštės atmetamos.
 
-// Esamo serverio request funkcijoje:
-if (await vip(req, res)) return;
-// Toliau vykdomas nepakeistas dabartinės svetainės handleris.
-```
+Atskiras serveris yra Render paslauga `srv-dasnvkojo6nc73cks2b0`, originali statinė svetainė — `srv-darnfinpn0mc73d9h8og`. Abu ištekliai priklauso patvirtintai darbo sričiai `tea-daqolg6gekts739eno7g`. Naudojamas vienas nemokamo plano serveris; po neveiklumo pirmas prisijungimas gali užtrukti, perkrovimas panaikina aktyvias sesijas. `/healthz` skirtas tik serverio būklei.
 
-Handleris aptarnauja tik `/vip` ir `/vip/…`; kitoms užklausoms grąžina `false`. Negalima pakeisti pagrindinio serverio pateiktu demonstraciniu `server.mjs`, nes jis pats neaptarnauja senos svetainės.
+Šios paslaugos Git saugyklą klonuoja kaip viešą URL be Git tiekėjo prieigos. Nors API rodo autoDeploy=yes, patvirtinta, kad automatinis naujo commit diegimas nevyksta; po pakeitimų būtinas vienas Deploy latest commit, nekeičiant plano ar raktų.
 
-Jei esama svetainė yra Render Static Site, vien statinio `/vip/index.html` katalogo neužtenka serverio autentifikacijai. Reikės prie esamo domeno `/vip/*` prijungti serverio maršrutą arba suderinamą saugų backend per same-origin rewrite. Statinių puslapių dizainas, meniu, domeno šaknis ir likę maršrutai turi likti nepakeisti. Reikalingos tik dvi papildomos rewrite taisyklės: `/vip` ir `/vip/*`, nukreiptos į atitinkamus atskiros VIP tarnybos kelius. Esamos taisyklės išsaugomos. `/healthz` skirtas tik atskiro serverio būklei tikrinti.
+`VIP_TRUSTED_IP_HEADER` nenustatytas: keli lankytojai per tą patį Render tarpinį serverį gali dalytis bandymų limitu. Pirmas nepatikrintas X-Forwarded-For adresas nelaikomas patikimu lankytojo adresu.
 
-`VIP_TRUSTED_IP_HEADER` paliekamas nenustatytas: keli lankytojai per tą patį Render tarpinį serverį gali dalytis bandymų limitu. Pirmas nepatikrintas X-Forwarded-For adresas nelaikomas patikimu lankytojo adresu. Naudojama viena serverio kopija.
-
-VIP nuorodos nereikia pridėti į pagrindinį meniu, sitemap ar robots sąrašą. Pats žinomas `/vip` kelias nėra apsaugos priemonė; apsaugą vykdo serveris.
+Pats `/vip` kelias nėra apsauga: kiekvieną duomenų užklausą autorizuoja serveris.
 
 ## Muzika ir efektai
 
@@ -73,6 +66,6 @@ Neono animacijos lėtos, nestroboskopinės. Efektų pasirinkimas išsaugomas tik
 
 `npm test` tikrina autentifikaciją, prisijungimo ribojimą, sesijos pabaigą, CSRF, filtrus, visas laukų rūšis, teritorijas, skirtingus vienetus, trūkstamas reikšmes ir puslapiavimą. Papildoma HTTP ir naršyklės patikra atliekama prieš diegimą. Sesijos ir bandymų ribos šioje versijoje laikomos vieno serverio atmintyje: perkrovus reikia prisijungti iš naujo. Prieš diegiant kelias serverio kopijas sesijas ir ribojimą perkelti į bendrą saugyklą.
 
-2026-09-27 vietinė patikra: 11 testų sėkmingi, įskaitant tikro užšifruoto 4 500 įrašų katalogo HTTP užklausas. Patvirtinti originalių maršrutų perdavimas nepakeistam handleriui, 401 neprisijungus, 403 netinkamam Origin / CSRF, 404 privatiems failams ir sesijos panaikinimas atsijungus. Gyvo serverio patikra sėkminga: HTTPS prisijungimas, Secure / HttpOnly sesija, 4 500 įrašų, 19 laukų, Vilniaus teritorijos ir kainos rūšiavimas, CSRF, atsijungimas bei neprieinami privatūs failai. Pagrindinio puslapio HTML SHA-256 prieš ir po diegimo sutampa. Darbalaukio prisijungimo vaizdas patikrintas naršyklėje; YouTube rodo teisingą dainą ir valdiklius, bet nenutrūkstamas atkūrimas šiame naršyklės seanse nepatvirtintas. Mobili sąsaja pritaikyta, tačiau tikro mobiliojo įrenginio patikra dar neatlikta. Prisijungimo per pagrindinio domeno rewrite patikra atliekama tik prijungus maršrutus.
+2026-09-27 vietinė patikra: 14 testų sėkmingi, įskaitant tikro užšifruoto 4 500 įrašų katalogo HTTP užklausas. Patvirtinti originalių maršrutų perdavimas nepakeistam handleriui, 401 neprisijungus, 403 netinkamam Origin / CSRF, 404 privatiems failams ir sesijos panaikinimas atsijungus. Gyvo serverio patikra sėkminga: HTTPS prisijungimas, Secure / HttpOnly sesija, 4 500 įrašų, 19 laukų, Vilniaus teritorijos ir kainos rūšiavimas, CSRF, atsijungimas bei neprieinami privatūs failai. Pagrindinio puslapio HTML SHA-256 prieš ir po diegimo sutampa. Darbalaukio prisijungimo vaizdas patikrintas naršyklėje; YouTube rodo teisingą dainą ir valdiklius, bet nenutrūkstamas atkūrimas šiame naršyklės seanse nepatvirtintas. Mobili sąsaja pritaikyta, tačiau tikro mobiliojo įrenginio patikra dar neatlikta. Tikslus CORS kilmės tikrinimas, Bearer sesija, neteisingų žetonų atmetimas, sesijos pabaiga ir atsijungimas papildomai patikrinti testais. Galutinė domeno patikra atliekama paskelbus statinį `/vip` aplanką.
 
 50 tolesnių patobulinimų aprašyti `50-patobulinimu.md`.

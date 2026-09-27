@@ -9,8 +9,15 @@ export function createAuth({username,passwordHash,secure=true,now=()=>Date.now()
   const cookieName=secure?'__Secure-auctioneer_vip':'auctioneer_vip_local';
   const cookie=(token,maxAge)=>`${cookieName}=${token}; Path=/vip; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure?'; Secure':''}`;
   function clean(){const t=now();for(const [id,s]of sessions)if(t>s.expires||t-s.seen>30*60_000)sessions.delete(id);for(const [k,a]of attempts)if(t>a.until)attempts.delete(k);}
-  function session(header='') {
-    clean();const token=header.split(';').map(c=>c.trim()).find(c=>c.startsWith(cookieName+'='))?.slice(cookieName.length+1);
+  function session(header='',authorization) {
+    clean();let token;
+    if(authorization!==undefined){
+      // An explicitly supplied Authorization header must never fall back to a cookie.
+      if(typeof authorization!=='string'||!/^Bearer [A-Za-z0-9_-]{43}$/.test(authorization))return null;
+      token=authorization.slice(7);
+      const bytes=Buffer.from(token,'base64url');
+      if(bytes.length!==32||bytes.toString('base64url')!==token)return null;
+    }else token=header.split(';').map(c=>c.trim()).find(c=>c.startsWith(cookieName+'='))?.slice(cookieName.length+1);
     const s=token?sessions.get(token):null;if(!s)return null;s.seen=now();return {...s,token};
   }
   async function login(suppliedUser,suppliedPassword,ip){
@@ -28,7 +35,7 @@ export function createAuth({username,passwordHash,secure=true,now=()=>Date.now()
     if(sessions.size>=5000)sessions.delete(sessions.keys().next().value);
     const token=randomBytes(32).toString('base64url');
     const s={username,csrf:randomBytes(24).toString('base64url'),created:now(),seen:now(),expires:now()+8*60*60_000};
-    sessions.set(token,s);return{status:200,session:s,cookie:cookie(token,8*60*60)};
+    sessions.set(token,s);return{status:200,session:s,token,cookie:cookie(token,8*60*60)};
   }
   function logout(s){if(s)sessions.delete(s.token);return cookie('',0);}
   return{login,session,logout,csrfValid:(s,t)=>typeof t==='string'&&equal(s.csrf,t)};

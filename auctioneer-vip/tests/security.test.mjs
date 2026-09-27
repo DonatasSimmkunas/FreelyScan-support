@@ -24,3 +24,22 @@ test('expires sessions after inactivity or maximum age',async()=>{
   let clock=1_000_000;const auth=createAuth({username:'tester',passwordHash,now:()=>clock});
   const login=await auth.login('tester',password,'one');assert.ok(auth.session(login.cookie));clock+=31*60_000;assert.equal(auth.session(login.cookie),null);
 });
+test('bearer sessions require canonical 32-byte tokens and never fall back to cookies',async()=>{
+  const auth=createAuth({username:'tester',passwordHash});
+  const first=await auth.login('tester',password,'one'),second=await auth.login('tester',password,'two');
+  assert.match(first.token,/^[A-Za-z0-9_-]{43}$/);
+  assert.equal(auth.session('',`Bearer ${first.token}`).token,first.token);
+  assert.equal(auth.session(first.cookie,`Bearer ${second.token}`).token,second.token);
+  const malformed=['',null,'Bearer short',`bearer ${first.token}`,`Bearer  ${first.token}`,`Bearer ${first.token}=`,`Bearer ${first.token}\n`,`Bearer ${randomBytes(32).toString('base64url')}`];
+  for(const authorization of malformed)assert.equal(auth.session(first.cookie,authorization),null);
+  const s=auth.session('',`Bearer ${first.token}`);auth.logout(s);
+  assert.equal(auth.session('',`Bearer ${first.token}`),null);assert.equal(auth.session(first.cookie),null);
+});
+test('bearer sessions expire after inactivity and after eight hours despite ongoing use',async()=>{
+  let clock=1_000_000;const auth=createAuth({username:'tester',passwordHash,now:()=>clock});
+  const idle=await auth.login('tester',password,'one');clock+=31*60_000;
+  assert.equal(auth.session('',`Bearer ${idle.token}`),null);
+  const active=await auth.login('tester',password,'one');
+  for(let i=0;i<16;i++){clock+=29*60_000;assert.ok(auth.session('',`Bearer ${active.token}`));}
+  clock+=17*60_000;assert.equal(auth.session('',`Bearer ${active.token}`),null);
+});

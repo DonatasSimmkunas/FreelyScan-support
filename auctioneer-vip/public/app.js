@@ -1,5 +1,7 @@
 import {startOnEntry} from './music.js';
 const $=id=>document.getElementById(id);
+const staticClient=!['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+const apiBase=staticClient?'https://auctioneer-vip.onrender.com/vip/api/':'/vip/api/';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=new Intl.NumberFormat('lt-LT',{maximumFractionDigits:4});
 const isMissing=value=>value===null||value===undefined||value==='';
@@ -8,7 +10,7 @@ const priceSuffix=u=>({'€/h':'už valandą','€/m2':'už m²','€/m3':'už m
 const webURL=value=>{try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:null;}catch{return null;}};
 const phoneURL=value=>{const s=String(value||'').replace(/[\s()-]/g,'');return /^\+?\d{5,20}$/.test(s)?'tel:'+s:null;};
 const emailURL=value=>{const s=String(value||'').trim();return /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(s)?'mailto:'+encodeURIComponent(s):null;};
-let csrf='',metadata=null,rows=[],page=1,pages=1,requestSerial=0,pendingRequest=null,debounceId,toastTimer;
+let accessToken='',csrf='',metadata=null,rows=[],page=1,pages=1,requestSerial=0,pendingRequest=null,debounceId,toastTimer;
 const operators=[['contains','Turi tekstą'],['not_contains','Neturi teksto'],['eq','Lygu'],['neq','Nelygu'],['gte','Ne mažiau nei'],['lte','Ne daugiau nei'],['missing','Trūksta reikšmės'],['present','Reikšmė nurodyta']];
 const mobileLayout=matchMedia('(max-width: 650px)');
 function syncFilterLayout(){$('filterPanel').open=!mobileLayout.matches;}
@@ -28,14 +30,17 @@ function revealResults(){
 
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,2800);}
 function clearSensitiveView(message=''){
-  csrf='';rows=[];metadata=null;pendingRequest?.abort();$('resultsBody').replaceChildren();$('detailContent').replaceChildren();
+  accessToken='';csrf='';rows=[];metadata=null;requestSerial++;pendingRequest?.abort();$('resultsBody').replaceChildren();$('detailContent').replaceChildren();
   if($('detailDialog').open)$('detailDialog').close();
   $('appView').hidden=true;$('loginView').hidden=false;$('logout').hidden=true;document.body.classList.add('login-mode');$('routeState').textContent='PRIEIGA';$('loginError').textContent=message;$('password').value='';
 }
 async function api(endpoint,options={}){
   const {payload,signal}=options;
-  const response=await fetch('/vip/api/'+endpoint,{method:payload===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',signal,
-    headers:payload===undefined?{}:{'Content-Type':'application/json','X-VIP-CSRF':csrf},body:payload===undefined?undefined:JSON.stringify(payload)});
+  const headers=payload===undefined?{}:{'Content-Type':'application/json','X-VIP-CSRF':csrf};
+  if(staticClient)headers['X-VIP-Client']='static';
+  if(staticClient&&accessToken)headers.Authorization='Bearer '+accessToken;
+  const response=await fetch(apiBase+endpoint,{method:payload===undefined?'GET':'POST',credentials:staticClient?'omit':'same-origin',cache:'no-store',signal,
+    headers,body:payload===undefined?undefined:JSON.stringify(payload)});
   const data=await response.json();
   if(!response.ok){
     if(response.status===401&&endpoint!=='login'&&endpoint!=='session')clearSensitiveView('Sesija baigėsi. Prisijunkite iš naujo.');
@@ -45,6 +50,7 @@ async function api(endpoint,options={}){
 }
 function addOptions(id,values,render=x=>x){const select=$(id);select.replaceChildren(select.options[0]);for(const value of values){const o=document.createElement('option');o.value=value;o.textContent=render(value);select.append(o);}}
 async function enter(session){
+  if(staticClient&&session.accessToken)accessToken=session.accessToken;
   csrf=session.csrf;
   metadata=await api('metadata');
   $('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';
@@ -61,8 +67,8 @@ $('loginForm').addEventListener('submit',async event=>{
   event.preventDefault();$('loginError').textContent='';$('loginButton').disabled=true;$('loginButton').firstElementChild.textContent='Tikrinama…';
   startOnEntry();
   try{const session=await api('login',{payload:{username:$('username').value.trim(),password:$('password').value}});await enter(session);}
-  catch(error){$('loginError').textContent=error.message;}
-  finally{$('loginButton').disabled=false;$('loginButton').firstElementChild.textContent='Prisijungti';}
+  catch(error){accessToken='';csrf='';$('loginError').textContent=error.message;}
+  finally{$('password').value='';$('loginButton').disabled=false;$('loginButton').firstElementChild.textContent='Prisijungti';}
 });
 $('showPassword').addEventListener('click',()=>{const show=$('password').type==='password';$('password').type=show?'text':'password';$('showPassword').textContent=show?'Slėpti':'Rodyti';$('showPassword').setAttribute('aria-pressed',String(show));});
 $('logout').addEventListener('click',async()=>{try{await api('logout',{payload:{}});clearSensitiveView();$('username').focus();}catch(error){toast(error.message);}});
@@ -163,4 +169,6 @@ reduced.addEventListener('change',event=>{if(event.matches){effects=false;render
 // Only visual preferences are stored. Contacts, passwords and sessions never go to localStorage.
 // Request playback on every entry. Browsers may still require pressing Play.
 startOnEntry();
-try{const session=await api('session');await enter(session);}catch(error){if(error.status!==401){$('loginError').textContent='Nepavyko patikrinti sesijos. Pabandykite prisijungti.';}}
+if(!staticClient){try{const session=await api('session');await enter(session);}catch(error){if(error.status!==401){$('loginError').textContent='Nepavyko patikrinti sesijos. Pabandykite prisijungti.';}}}
+// Static-site access tokens live only in memory. Refreshing the page requires sign-in.
+window.addEventListener('pageshow',event=>{if(event.persisted)clearSensitiveView('Prisijunkite iš naujo.');});

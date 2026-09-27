@@ -213,3 +213,4 @@ button{letter-spacing:-.012em}
  .search-symbol .ui-icon{width:20px;height:20px}
 }
 @media(max-width:359px){.counter-metrics{gap:11px}.counter-metric+.counter-metric{padding-left:11px}.counter-metric-label{font-size:.625rem}.counter-metric-label .ui-icon{display:none}.login-counter .counter-metric>strong{font-size:1.5rem}.counter-demo-label{font-size:.5rem}}
+.live-catalog-note{margin:-12px 0 24px;color:#a7b99c;font-size:.75rem;line-height:1.6;overflow-wrap:anywhere}

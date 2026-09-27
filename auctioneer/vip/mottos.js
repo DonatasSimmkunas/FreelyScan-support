@@ -72,10 +72,8 @@ function createBox(location){
   });
   boxes.push(box);return box;
 }
-const loginIntro=document.querySelector('#loginView .login-intro');
-if(loginIntro)loginIntro.insertAdjacentElement('afterend',createBox('login'));
-const workspaceHead=document.querySelector('#appView .workspace-head');
-if(workspaceHead)workspaceHead.insertAdjacentElement('afterend',createBox('workspace'));
+const headerMotto=document.getElementById('headerMotto');
+if(headerMotto)headerMotto.append(createBox('header'));
 const intersectionObserver='IntersectionObserver' in window?new IntersectionObserver(entries=>{
   for(const entry of entries){if(entry.isIntersecting)intersecting.add(entry.target);else intersecting.delete(entry.target);}
   schedule();

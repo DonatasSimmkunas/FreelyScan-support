@@ -214,3 +214,59 @@ button{letter-spacing:-.012em}
 }
 @media(max-width:359px){.counter-metrics{gap:11px}.counter-metric+.counter-metric{padding-left:11px}.counter-metric-label{font-size:.625rem}.counter-metric-label .ui-icon{display:none}.login-counter .counter-metric>strong{font-size:1.5rem}.counter-demo-label{font-size:.5rem}}
 .live-catalog-note{margin:-12px 0 24px;color:#a7b99c;font-size:.75rem;line-height:1.6;overflow-wrap:anywhere}
+
+/* Compact shared header: identity and controls, then phrase and live counts. */
+.masthead{display:block;height:auto;min-height:0;padding:0 3.7%;gap:0}
+.masthead-main{display:flex;align-items:center;gap:32px;min-height:76px;min-width:0}
+.masthead-main .global-controls{margin-left:auto}
+.header-dashboard{display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,400px);align-items:center;gap:32px;padding:11px 0 13px;border-top:1px solid #bacda51a}
+.header-motto{min-width:0}
+.header-counters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0;padding:0;margin:0;background:none;border:0;box-shadow:none}
+.header-counters .counter-metric+.counter-metric{padding-left:18px;border-left:1px solid #35452d}
+.header-counters .counter-metric-label{font-size:.625rem;gap:6px;white-space:normal;line-height:1.35}
+.header-counters .counter-metric-label .ui-icon{flex-shrink:0;width:13px;height:13px}
+.counter-figures{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 10px;margin-top:5px}
+.header-counters strong{font-family:var(--font-display);font-size:1.375rem;line-height:1.1;font-weight:600;letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:#d5ff9a;white-space:nowrap}
+.header-counters .counter-metric:last-child strong{color:#d9c4ff}
+.header-counters small{font-size:.5625rem;line-height:1.4;color:#8fa186;white-space:nowrap}
+.header-counters small span{color:#bfceb5;font-variant-numeric:tabular-nums}
+@media(max-width:1200px){.masthead{padding:0 24px}.masthead-main{gap:18px}.header-dashboard{gap:22px;grid-template-columns:minmax(0,1fr) 340px}}
+@media(max-width:850px){.header-dashboard{grid-template-columns:minmax(0,1fr);gap:10px}.header-counters{border-top:1px solid #bacda512;padding-top:10px}.header-counters .counter-metric{display:flex;align-items:center;justify-content:space-between;gap:10px}.header-counters .counter-metric-label{max-width:135px}.counter-figures{margin-top:0;flex-direction:column;gap:2px;align-items:flex-end}}
+@media(max-width:650px){.masthead{padding:0 18px}.masthead-main{flex-wrap:wrap;gap:10px;min-height:0;padding:max(12px,env(safe-area-inset-top)) 0 12px}.masthead-main .brand{flex:1 0 auto}.masthead-main .global-controls{flex-wrap:wrap;justify-content:flex-end;gap:6px}.header-dashboard{padding:9px 0 12px;gap:9px}.header-counters{gap:12px;padding-top:9px}.header-counters .counter-metric{display:block}.header-counters .counter-metric+.counter-metric{padding-left:12px}.header-counters .counter-metric-label{max-width:none;font-size:.59375rem}.counter-figures{flex-direction:row;align-items:baseline;gap:2px 7px;margin-top:4px}.header-counters strong{font-size:1.25rem}.header-counters small{font-size:.53125rem}}
+
+/* Dense overview keeps the actual search close to the top. */
+.workspace{padding-top:22px}
+.workspace .workspace-head{margin-bottom:16px;gap:12px}
+.workspace .workspace-head h1{font-size:1.875rem;line-height:1.15;margin:0}
+.workspace .workspace-head .eyebrow{font-size:.625rem;margin:0 0 6px}
+.workspace .source-info{font-size:.625rem;gap:4px}
+.workspace .source-info strong{font-size:.75rem}
+.catalog-freshness{display:block;margin-top:2px;color:#9fc491;font-size:.625rem;line-height:1.4}
+.catalog-freshness[data-state=error]{color:#e2be8c}
+.workspace .niche-picker{margin-bottom:12px;gap:8px}
+.workspace .niche-button{min-height:44px;padding:9px 13px;gap:16px;font-size:.8125rem}
+.workspace .niche-count{padding:4px 7px;font-size:.75rem}
+.workspace .stats{margin-bottom:12px}
+.workspace .stats>div{padding:12px 15px;gap:10px;display:flex}
+.workspace .stat-label{font-size:.6875rem;line-height:1.4}
+.workspace .stats strong{font-size:1.4rem;line-height:1.2}
+.workspace .live-catalog-note{margin:0 0 12px;font-size:.6875rem;line-height:1.45}
+.workspace .vip-hologram{margin:0 0 10px;border-radius:8px;box-shadow:inset 0 1px #c4ffe912}
+.workspace .vip-hologram>summary{min-height:48px;padding:7px 13px;gap:10px}
+.workspace .vip-hologram .holo-emblem{width:28px;height:28px;border-radius:7px;font-size:20px}
+.workspace .vip-hologram summary strong{font-size:.8125rem}
+.workspace .vip-hologram:not([open]) summary small{display:none}
+.workspace .saved-searches{margin-bottom:10px}
+.workspace .saved-searches-head{padding:3px 10px;gap:8px}
+.workspace .saved-searches-toggle{padding:5px 2px;font-size:.8125rem}
+.workspace .saved-searches-save{font-size:.75rem;padding:8px 11px}
+.workspace .crawler-panel{margin-bottom:12px}
+.workspace .crawler-summary{min-height:48px;padding:9px 13px;gap:10px}
+.workspace .crawler-summary-title{font-size:.8125rem}
+.workspace .crawler-live-feed{margin:22px 0 0}
+.workspace .crawler-feed-head{padding:14px 17px;gap:12px}
+.workspace .crawler-feed-head h2{font-size:1.05rem;margin:5px 0 3px}
+.workspace .crawler-feed-entries{max-height:280px;padding:0 17px}
+.workspace .crawler-feed-entry{padding:11px 0;gap:12px}
+@media(max-width:900px){.workspace .stats>div{padding:10px 12px}.workspace .stat-label{font-size:.625rem}.workspace .stats strong{font-size:1.25rem}}
+@media(max-width:650px){.workspace{padding-top:18px}.workspace .workspace-head{gap:8px;margin-bottom:12px}.workspace .workspace-head h1{font-size:1.5rem}.workspace .niche-picker{gap:6px}.workspace .niche-button{font-size:.75rem;padding:8px 12px;min-height:44px}.workspace .stats>div{padding:10px 12px}.workspace .stats strong{font-size:1.25rem}.workspace .stat-label{font-size:.65625rem}.workspace .saved-searches-head{flex-wrap:nowrap}.workspace .saved-searches-toggle{width:auto;flex:1;gap:6px;font-size:.75rem}.workspace .saved-searches-save{width:auto;max-width:115px;margin:0;padding:7px 9px;font-size:.6875rem;white-space:normal}.workspace .crawler-summary{padding:9px 35px 9px 12px;gap:6px;min-height:48px}.workspace .crawler-summary-title{flex-basis:auto}.workspace .crawler-summary>.crawler-chevron{top:13px}.workspace .crawler-feed-head{padding:13px;gap:10px}.workspace .crawler-feed-entries{padding:0 13px;max-height:300px}.workspace .crawler-feed-entry{padding:11px 0;gap:7px}}

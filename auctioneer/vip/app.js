@@ -16,7 +16,7 @@ const categoryText=value=>{const s=String(value??'').trim();return !s||/^(__miss
 const visibleField=f=>f.type!=='date'&&!/(?:date|timestamp|checked_at|updated_at|created_at|patikrinta|tikrinimo_data)/i.test(f.key)&&!/(?:tikrinimo|patikros|patikrinimo|atnaujinimo)\s+data/i.test(f.label||'');
 const serviceSorts=[['price_asc','Kaina: nuo mažiausios'],['price_desc','Kaina: nuo didžiausios'],['name_asc','Pavadinimas: A–Ž'],['name_desc','Pavadinimas: Ž–A'],['rating_desc','Geriausias įvertinimas'],['reviews_desc','Daugiausia atsiliepimų'],['experience_desc','Didžiausia patirtis'],['city_asc','Teritorija: A–Ž']];
 const employerSorts=[['jobs_desc','Skelbimų: nuo daugiausia'],['jobs_asc','Skelbimų: nuo mažiausia'],['name_asc','Pavadinimas: A–Ž'],['name_desc','Pavadinimas: Ž–A'],['city_asc','Teritorija: A–Ž']];
-let accessToken='',csrf='',metadata=null,rows=[],page=1,pages=1,currentNiche='services',sessionVersion=0,nicheSerial=0,requestSerial=0,detailSerial=0,pendingMetadata=null,pendingRequest=null,pendingDetail=null,debounceId,toastTimer,crawlerRevision='',refreshInfoPending=false;
+let accessToken='',csrf='',metadata=null,rows=[],page=1,pages=1,currentNiche='services',sessionVersion=0,nicheSerial=0,requestSerial=0,detailSerial=0,pendingMetadata=null,pendingRequest=null,pendingDetail=null,debounceId,toastTimer,crawlerRevision='',refreshInfoPending=false,pendingCatalogRefresh=null,lastCatalogAttempt=-Infinity,lastCatalogUpdatedAt=null;
 const operators=[['contains','Turi tekstą'],['not_contains','Neturi teksto'],['eq','Lygu'],['neq','Nelygu'],['gte','Ne mažiau nei'],['lte','Ne daugiau nei'],['missing','Trūksta reikšmės'],['present','Reikšmė nurodyta']];
 const mobileLayout=matchMedia('(max-width: 650px)');
 const employers=()=>currentNiche==='employers';
@@ -57,6 +57,7 @@ function toast(message){$('toast').textContent=message;$('toast').hidden=false;c
 function invalidateDetail(){detailSerial++;pendingDetail?.abort();pendingDetail=null;}
 function clearSensitiveView(message=''){
   savedSearches.deactivate();crawlerRevision='';
+  pendingCatalogRefresh?.abort();lastCatalogAttempt=-Infinity;lastCatalogUpdatedAt=null;$('catalogFreshness')?.remove();
   accessToken='';csrf='';sessionVersion++;rows=[];metadata=null;nicheSerial++;requestSerial++;pendingMetadata?.abort();pendingRequest?.abort();invalidateDetail();clearTimeout(debounceId);$('resultsBody').replaceChildren();$('detailContent').replaceChildren();
   if($('detailDialog').open)$('detailDialog').close();
   $('activeFilterChips').replaceChildren();$('activeFilterChips').hidden=true;$('clearSearch').hidden=true;
@@ -77,7 +78,7 @@ function renderNiche(){
   const employer=employers();$('appView').dataset.niche=currentNiche;
   $('workspaceTitle').textContent=employer?'Įmonės ieško darbininkų':'Paslaugų paieška';
   $('sourceName').textContent=employer?'Darbdavių kontaktų bazė':'Paslaugų teikėjų bazė';
-  $('statRecordsLabel').textContent=employer?'Įmonės':'Įrašai';$('statFourthLabel').textContent=employer?'Darbo skelbimai':'Su nurodyta kaina';
+  $('statRecordsLabel').textContent=employer?'Įmonės':'Paslaugų teikėjai';$('statFourthLabel').textContent=employer?'Darbo skelbimai':'Su nurodyta kaina';
   $('cityLabel').textContent=employer?'Miestas, rajonas arba šalis':'Miestas arba rajonas';
   $('q').placeholder=employer?'Įmonė, pareigos, miestas, telefonas ar kita informacija…':'Vardas, įmonė, telefonas, paslauga arba kita informacija…';
   document.querySelectorAll('[data-services-only]').forEach(el=>el.hidden=employer);$('employerFilters').hidden=!employer;
@@ -88,6 +89,7 @@ function renderNiche(){
 async function switchNiche(next){
   if(!['services','employers'].includes(next))return;
   window.dispatchEvent(new CustomEvent('vip:clear-results'));
+  pendingCatalogRefresh?.abort();lastCatalogUpdatedAt=null;$('catalogFreshness')?.remove();
   const serial=++nicheSerial;currentNiche=next;metadata=null;rows=[];requestSerial++;pendingRequest?.abort();pendingMetadata?.abort();invalidateDetail();clearTimeout(debounceId);
   if($('detailDialog').open)$('detailDialog').close();$('detailContent').replaceChildren();
   $('searchForm').reset();$('rules').replaceChildren();$('ruleCount').textContent='0';$('resultsBody').replaceChildren();$('resultCount').textContent='—';$('mobileResultCount').textContent='—';$('pageInfo').textContent='';$('previousPage').disabled=true;$('nextPage').disabled=true;
@@ -101,7 +103,7 @@ async function switchNiche(next){
     addOptions('category',metadata.categories);addOptions('city',metadata.cities);addOptions('unit',metadata.units||[],unitLabel);
     if(!employers()){const option=document.createElement('option');option.value='__missing__';option.textContent='Vienetas nenurodytas';$('unit').append(option);}
     addOptions('employerType',metadata.employerTypes||[]);addOptions('contactStatus',metadata.contactStatuses||[]);addOptions('portal',metadata.portals||[]);
-    renderCatalogCounts(data);
+    renderCatalogCounts(data);lastCatalogAttempt=performance.now();renderCatalogFreshness(true);
     $('advancedLabel').textContent=`Visų ${metadata.fields.length} laukų filtrai`;
     $('advancedNote').textContent=employers()?'Filtruokite įmonių informaciją, veiklos sritis, ieškomas pareigas ir kontaktų būseną.':'Filtruokite visus pateiktus duomenų laukus. Įmonės žyma nepatvirtina teikėjo teisinės formos.';
     updateTerritory();activeFilters();await search(1);
@@ -155,25 +157,48 @@ function renderCatalogCounts(data=metadata){
   note.hidden=!employers();
   note.textContent=employers()?`${fmt.format(metadata.importedJobsTotal??metadata.jobsTotal??0)} skelbimų iš importų · ${fmt.format(metadata.crawlerJobsTotal||0)} šiuo metu šaltiniuose skelbiamų crawlerio radinių.${metadata.liveStale?' Crawlerio atnaujinimas vėluoja; rodoma paskutinė gauta versija.':''}`:'';
 }
+function renderCatalogFreshness(success){
+  let label=$('catalogFreshness');
+  if(!label){label=document.createElement('span');label.id='catalogFreshness';label.className='catalog-freshness';document.querySelector('.source-info').append(label);}
+  if(success)lastCatalogUpdatedAt=new Date();
+  const time=lastCatalogUpdatedAt?new Intl.DateTimeFormat('lt-LT',{hour:'2-digit',minute:'2-digit'}).format(lastCatalogUpdatedAt):'';
+  label.dataset.state=success?'ok':'error';
+  label.textContent=success?`Atnaujinta ${time} · automatiškai`:`Atnaujinti nepavyko${time?' · paskutinį kartą '+time:''}`;
+  label.title=success?'Skaičiai ir paieška tikrinami kas minutę, kol puslapis matomas.':'Rodomi paskutiniai gauti duomenys. Bandysime atnaujinti automatiškai.';
+}
+function refreshOptionsPreservingSelection(id,values,render=value=>value){
+  const selected=$(id).value;
+  addOptions(id,selected&&!values.includes(selected)?[...values,selected]:values,render);
+  $(id).value=selected;
+}
 async function refreshCatalogInfo(){
-  if(!csrf||!metadata||refreshInfoPending||document.visibilityState!=='visible')return false;
-  const version=sessionVersion,niche=currentNiche,serial=nicheSerial;refreshInfoPending=true;
+  if(!csrf||!metadata||$('appView').hidden||refreshInfoPending||document.visibilityState!=='visible'||performance.now()-lastCatalogAttempt<10000)return false;
+  const version=sessionVersion,niche=currentNiche,serial=nicheSerial,searchVersion=requestSerial;refreshInfoPending=true;lastCatalogAttempt=performance.now();
+  const controller=new AbortController();pendingCatalogRefresh=controller;
   try{
-    const data=await api('metadata?niche='+encodeURIComponent(niche));
+    const data=await api('metadata?niche='+encodeURIComponent(niche),{signal:AbortSignal.any([controller.signal,AbortSignal.timeout(45000)])});
     if(!csrf||version!==sessionVersion||serial!==nicheSerial)return false;
     metadata={...data,categories:[...new Set((data.categories||[]).map(categoryText).filter(Boolean))],fields:(data.fields||[]).filter(visibleField).map(f=>({...f,label:f.key==='category'?'Veiklos sritis':f.label}))};
-    renderCatalogCounts(data);
-    for(const [id,values]of [['category',metadata.categories],['employerType',metadata.employerTypes||[]],['contactStatus',metadata.contactStatuses||[]],['portal',metadata.portals||[]]]){const selected=$(id).value;addOptions(id,values);if(values.includes(selected))$(id).value=selected;}
-    if(employers())await search(page);
-    return true;
-  }catch{return false;/* Retry on the next status update while retaining verified numbers. */}
-  finally{refreshInfoPending=false;}
+    renderCatalogCounts(data);renderCatalogFreshness(true);
+    for(const [id,values]of [['category',metadata.categories],['employerType',metadata.employerTypes||[]],['contactStatus',metadata.contactStatuses||[]],['portal',metadata.portals||[]]])refreshOptionsPreservingSelection(id,values);
+    if(!employers())refreshOptionsPreservingSelection('unit',[...(metadata.units||[]),'__missing__'],value=>value==='__missing__'?'Vienetas nenurodytas':unitLabel(value));
+    $('advancedLabel').textContent=`Visų ${metadata.fields.length} laukų filtrai`;
+    // A newer user search already fetches fresh rows; do not cancel it or reset its page.
+    // City options remain scoped to the returned search results, never the global metadata.
+    if(searchVersion===requestSerial&&$('resultsBody').getAttribute('aria-busy')!=='true')await search(page);
+    return Boolean(csrf&&version===sessionVersion&&serial===nicheSerial);
+  }catch(error){
+    if(error.name!=='AbortError'&&csrf&&version===sessionVersion&&serial===nicheSerial)renderCatalogFreshness(false);
+    return false;
+  }finally{if(pendingCatalogRefresh===controller)pendingCatalogRefresh=null;refreshInfoPending=false;}
 }
 window.addEventListener('vip:crawler-status',event=>{
   const status=event.detail?.status;if(!status)return;
   const revision=JSON.stringify([status.lastRun,status.totalCompanies,status.totalJobs,status.contactCompanies]);
   if(revision!==crawlerRevision)void refreshCatalogInfo().then(updated=>{if(updated)crawlerRevision=revision;});
 });
+setInterval(()=>void refreshCatalogInfo(),60000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void refreshCatalogInfo();});
 async function search(targetPage=1,territoryAdjusted=false){
   if(!csrf||!metadata)return;activeFilters();clearTimeout(debounceId);const serial=++requestSerial,niche=currentNiche;pendingRequest?.abort();pendingRequest=new AbortController();
   $('loading').hidden=false;$('resultsBody').setAttribute('aria-busy','true');$('searchError').hidden=true;$('ruleCount').textContent=String(rules().length);

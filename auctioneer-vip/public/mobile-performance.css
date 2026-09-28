@@ -1,0 +1,35 @@
+/* Phone-only paint budget. Fine-pointer desktop styles remain untouched. */
+@media (max-width: 900px) and (pointer: coarse), (max-height: 600px) and (pointer: coarse) {
+  #ambientBackground { perspective:none; }
+  #ambientBackground .ambient-motion,
+  #ambientBackground .city-depth-floor,
+  #ambientBackground .photo-portrait,
+  #ambientBackground .ambient-photo::before,
+  #ambientBackground .ambient-photo::after,
+  #ambientBackground::after,
+  .portrait-atmosphere,.vip-lightning,.lightning-flash,.scanline {
+    display:none!important;
+    animation:none!important;
+  }
+  #ambientBackground .photo-city {
+    inset:0;opacity:1;animation:none!important;transform:none!important;
+    translate:none!important;transition:none;will-change:auto;
+  }
+  .login-art>img,.login-art .art-caption {
+    animation:none!important;transform:none!important;translate:none!important;
+    transition:none;will-change:auto;
+  }
+  /* Two small opacity animations retain the neon identity without screen-sized blends. */
+  .edge-light { width:10px;height:42vh;box-shadow:0 0 14px #c1ff4a65; }
+  .edge-light.right { box-shadow:0 0 14px #c5a0ff65; }
+  .edge-light::after { display:none; }
+  .holo-depth-grid,.holo-scan { display:none;animation:none!important; }
+  .vip-hologram .holo-visual { animation:none!important;transform:none!important; }
+  .holo-country,.holo-core { filter:none!important; }
+  .holo-stage,.hcard-stage { perspective:none; }
+  .hcard-card { transform:none!important;transform-style:flat;transition:none; }
+  dialog::backdrop { backdrop-filter:none;-webkit-backdrop-filter:none; }
+  body.phone-page-inactive *,body.phone-page-inactive *::before,body.phone-page-inactive *::after {
+    animation-play-state:paused!important;
+  }
+}

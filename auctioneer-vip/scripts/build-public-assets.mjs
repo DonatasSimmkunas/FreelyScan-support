@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const names=['app.js','crawler.js','counter.js','mottos.js','hologram.js','styles.css','mottos.css'];
+const names=['app.js','crawler.js','counter.js','mottos.js','hologram.js','styles.css','mottos.css','experience.js','mobile-performance.css'];
 const assets={};
 for(const name of names){
   let content=await readFile(path.join(root,'public',name),'utf8');

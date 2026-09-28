@@ -104,3 +104,21 @@ test('independent sources retire denied access, honor Retry-After and retain suc
   assert.equal(deniedCalls,1);assert.equal(throttledCalls,1);assert.equal(retiredCalls,0);assert.equal(healthyCalls,2);assert.equal(saved.length,2);
   assert.deepEqual(Object.fromEntries(summary.summary.map(item=>[item.id,item.status])),{healthy:'ok',retired:'removed',denied:'removed',throttled:'cooldown'});
 });
+
+test('rotation bounds each cycle to six sources and gives unchecked sources the next turn',async()=>{
+ const states=Array.from({length:14},(_,i)=>({id:`source${i}`,status:'idle',last_checked:null}));let clock=Date.parse('2026-09-28T00:00:00Z'),checked=[],summary;
+ const fetchImpl=async(raw,options={})=>{
+  const path=new URL(raw).pathname,body=options.body?JSON.parse(options.body):null;
+  if(path.endsWith('/vip_crawler_control'))return body.lease_owner?json([{id:1}]):new Response(null,{status:204});
+  if(path.endsWith('/vip_crawler_sources'))return json(states);
+  if(path.endsWith('/vip_crawler_runs')){if(options.method==='PATCH')summary=body;return new Response(null,{status:204});}
+  if(path.endsWith('/rpc/vip_crawler_ingest')){states.find(s=>s.id===body.p_source).last_checked=new Date(clock).toISOString();return json({newCompanies:0,companiesSeen:0,jobsSeen:0});}
+  if(path.endsWith('/rpc/vip_crawler_status'))return json({running:false});
+  throw new Error('Unexpected DB request');
+ };
+ const sources=states.map(s=>[s.id,async()=>{checked.push(s.id);return{sourceId:s.id,status:'ok',companies:[],jobs:[]};}]);
+ const handler=createCrawlerHandler({env,tokenSha256,fetchImpl,sources,now:()=>clock});
+ assert.equal((await handler(req({action:'run'}))).status,200);assert.equal(checked.length,6);assert.equal(summary.status,'ok');assert.equal(summary.summary.filter(s=>s.status==='queued').length,8);
+ clock+=900000;assert.equal((await handler(req({action:'run'}))).status,200);assert.equal(checked.length,12);assert.equal(new Set(checked).size,12);
+ clock+=900000;assert.equal((await handler(req({action:'run'}))).status,200);assert.equal(new Set(checked).size,14);
+});

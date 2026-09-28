@@ -199,3 +199,33 @@ test('new career boards are fixed, independently paginated and restricted to Lit
   await assert.rejects(fetchCareerBoardBatch({...options,boardId:'https://evil.example'}),/Nežinomas/);
   await assert.rejects(fetchCareerBoardBatch({...options,cursor:'board:other:1'}),/žymeklis/);assert.equal(calls,2);
 });
+
+test('Greenhouse rejects foreign, prospect, expired and untrusted jobs without inventing contacts',async()=>{
+  const board=CAREER_BOARD_SOURCES.find(b=>b.id==='careers_transfergo');
+  const job=(id,extra={})=>({id,internal_job_id:id,title:'Engineer',location:{name:'Vilnius, Lithuania'},absolute_url:`https://job-boards.greenhouse.io/transfergo/jobs/${id}`,first_published:'2026-09-25',...extra});
+  const batch=await fetchCareerBoardBatch({boardId:board.id,now:NOW,fetchImpl:async()=>response({jobs:[job(1),job(1),job(2,{location:{name:'London'}}),job(3,{internal_job_id:null}),job(4,{application_deadline:'2026-09-26'}),job(5,{absolute_url:'https://evil.example/transfergo/jobs/5'}),job(6,{application_deadline:'2026-09-27'})]})});
+  assert.deepEqual(batch.jobs.map(j=>j.source_job_id),['transfergo:1','transfergo:6']);
+  assert.equal(batch.jobs[1].expires_at,'2026-09-27T23:59:59.999Z');assert.equal(batch.companies[0].company_phone,'');assert.equal(batch.companies[0].company_code,null);
+});
+
+test('SmartRecruiters advances raw pages even when all jobs in a page are filtered out',async()=>{
+ const board=CAREER_BOARD_SOURCES.find(b=>b.id==='careers_ignitisgroup');
+ const options={boardId:board.id,limit:1,now:NOW,fetchImpl:async raw=>{
+  const u=new URL(raw);assert.equal(u.searchParams.get('country'),'lt');assert.equal(u.searchParams.get('limit'),'1');
+  const offset=Number(u.searchParams.get('offset'));
+  return response({totalFound:2,content:[{id:String(offset+1),name:'Elektrikas',releasedDate:'2026-09-25',location:{country:offset?'lt':'lv',city:offset?'Panevėžys':'Riga'}}]});
+ }};
+ const first=await fetchCareerBoardBatch(options);assert.equal(first.jobs.length,0);assert.equal(first.nextCursor,'board:careers_ignitisgroup:1');
+ const second=await fetchCareerBoardBatch({...options,cursor:first.nextCursor});assert.equal(second.jobs.length,1);assert.equal(second.jobs[0].city_area,'Panevėžys');assert.equal(second.nextCursor,null);assert.equal(second.jobs[0].url,'https://jobs.smartrecruiters.com/Ignitisgroup/2');
+});
+
+test('paged Lever continues beyond the first page and refuses cross-board cursors',async()=>{
+ const board=CAREER_BOARD_SOURCES.find(b=>b.id==='careers_palantir');
+ const options={boardId:board.id,limit:1,now:NOW,fetchImpl:async raw=>{
+  const u=new URL(raw),skip=Number(u.searchParams.get('skip'));assert.equal(u.searchParams.get('limit'),'1');
+  return response(skip===2?[]:[leverJob(String(skip),{country:skip?'LT':'DE',categories:{location:skip?'Vilnius':'Berlin'},hostedUrl:`https://jobs.lever.co/palantir/${skip}`})]);
+ }};
+ const first=await fetchCareerBoardBatch(options);assert.equal(first.jobs.length,0);assert.ok(first.nextCursor);
+ const second=await fetchCareerBoardBatch({...options,cursor:first.nextCursor});assert.equal(second.jobs.length,1);assert.ok(second.nextCursor);
+ const last=await fetchCareerBoardBatch({...options,cursor:second.nextCursor});assert.equal(last.nextCursor,null);
+});

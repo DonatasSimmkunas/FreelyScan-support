@@ -16,6 +16,22 @@ export const CAREER_BOARD_SOURCES = Object.freeze([
   Object.freeze({id:'careers_surfshark',provider:'Surfshark',type:'ashby',official:'https://surfshark.com/career',api:'https://api.ashbyhq.com/posting-api/job-board/surfshark',jobHost:'jobs.ashbyhq.com',path:'/surfshark/'}),
   Object.freeze({id:'careers_nord_security',provider:'Nord Security',type:'ashby',official:'https://nordsecurity.com/careers/',api:'https://api.ashbyhq.com/posting-api/job-board/nord-security',jobHost:'jobs.ashbyhq.com',path:'/nord-security/'}),
   Object.freeze({id:'careers_omnisend',provider:'Omnisend',type:'lever',official:'https://www.omnisend.com/careers/',api:'https://api.lever.co/v0/postings/omnisend?mode=json&limit=250',jobHost:'jobs.lever.co',path:'/omnisend/'}),
+  Object.freeze({"id":"careers_scale3c","provider":"ScaleTech","type":"lever","official":"https://jobs.lever.co/scale3c/","api":"https://api.lever.co/v0/postings/scale3c?mode=json&limit=250","jobHost":"jobs.lever.co","path":"/scale3c/","paged":true}),
+  Object.freeze({"id":"careers_palantir","provider":"Palantir","type":"lever","official":"https://jobs.lever.co/palantir/","api":"https://api.lever.co/v0/postings/palantir?mode=json&limit=250","jobHost":"jobs.lever.co","path":"/palantir/","paged":true}),
+  Object.freeze({"id":"careers_transfergo","provider":"TransferGo","type":"greenhouse","official":"https://job-boards.greenhouse.io/transfergo/","api":"https://boards-api.greenhouse.io/v1/boards/transfergo/jobs","jobHost":"job-boards.greenhouse.io","path":"/transfergo/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_wargamingen","provider":"Wargaming","type":"greenhouse","official":"https://job-boards.greenhouse.io/wargamingen/","api":"https://boards-api.greenhouse.io/v1/boards/wargamingen/jobs","jobHost":"job-boards.greenhouse.io","path":"/wargamingen/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_robinhood","provider":"Robinhood","type":"greenhouse","official":"https://job-boards.greenhouse.io/robinhood/","api":"https://boards-api.greenhouse.io/v1/boards/robinhood/jobs","jobHost":"job-boards.greenhouse.io","path":"/robinhood/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_wrike","provider":"Wrike","type":"greenhouse","official":"https://job-boards.greenhouse.io/wrike/","api":"https://boards-api.greenhouse.io/v1/boards/wrike/jobs","jobHost":"job-boards.greenhouse.io","path":"/wrike/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_tide","provider":"Tide","type":"greenhouse","official":"https://job-boards.greenhouse.io/tide/","api":"https://boards-api.greenhouse.io/v1/boards/tide/jobs","jobHost":"job-boards.greenhouse.io","path":"/tide/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_flohealth","provider":"Flo Health","type":"greenhouse","official":"https://job-boards.greenhouse.io/flohealth/","api":"https://boards-api.greenhouse.io/v1/boards/flohealth/jobs","jobHost":"job-boards.greenhouse.io","path":"/flohealth/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_ignitisgroup","provider":"Ignitis grupė","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Ignitisgroup/","api":"https://api.smartrecruiters.com/v1/companies/Ignitisgroup/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Ignitisgroup/"}),
+  Object.freeze({"id":"careers_jyskbaltics","provider":"JYSK Baltics","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/JYSKBaltics/","api":"https://api.smartrecruiters.com/v1/companies/JYSKBaltics/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/JYSKBaltics/"}),
+  Object.freeze({"id":"careers_continental","provider":"Continental","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Continental/","api":"https://api.smartrecruiters.com/v1/companies/Continental/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Continental/"}),
+  Object.freeze({"id":"careers_betsson","provider":"Betsson","type":"greenhouse","official":"https://job-boards.greenhouse.io/betsson/","api":"https://boards-api.greenhouse.io/v1/boards/betsson/jobs","jobHost":"job-boards.greenhouse.io","path":"/betsson/","jobHosts":["job-boards.greenhouse.io","boards.greenhouse.io"]}),
+  Object.freeze({"id":"careers_evolution","provider":"Evolution","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Evolution/","api":"https://api.smartrecruiters.com/v1/companies/Evolution/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Evolution/"}),
+  Object.freeze({"id":"careers_hmgroup","provider":"H&M Group","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/HMGroup/","api":"https://api.smartrecruiters.com/v1/companies/HMGroup/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/HMGroup/"}),
+  Object.freeze({"id":"careers_devoteam","provider":"Devoteam","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Devoteam/","api":"https://api.smartrecruiters.com/v1/companies/Devoteam/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Devoteam/"}),
+  Object.freeze({"id":"careers_nielseniq","provider":"NielsenIQ","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/NielsenIQ/","api":"https://api.smartrecruiters.com/v1/companies/NielsenIQ/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/NielsenIQ/"}),
 ]);
 export const SOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({id: 'company_careers', name: 'Oxylabs ir Hostinger karjeros puslapiai', url: 'https://career.oxylabs.io/', documentationUrl: 'https://github.com/lever/postings-api', expectedUpdateDays: 1}),
@@ -241,6 +257,8 @@ function careerCursor(cursor) {
 }
 
 function careerLocation(job, board) {
+  if(board.type==='greenhouse')return LT_LOCATION.test(clean(job.location?.name))?clean(job.location.name):null;
+  if(board.type==='smartrecruiters')return text(job.location?.country).toUpperCase()==='LT'?(clean(job.location.city)||'Lithuania'):null;
   if (board.type === 'lever') {
     const locations = [job.categories?.location, ...(Array.isArray(job.categories?.allLocations) ? job.categories.allLocations : [])].map(clean).filter(Boolean);
     const matching = locations.filter(location => LT_LOCATION.test(location));
@@ -256,7 +274,7 @@ function careerLocation(job, board) {
 function verifiedJobUrl(value, board) {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === board.jobHost && url.pathname.startsWith(board.path) && !url.username && !url.password ? url.href : null;
+    return url.protocol === 'https:' && (board.jobHosts||[board.jobHost]).includes(url.hostname) && url.pathname.startsWith(board.path) && !url.username && !url.password ? url.href : null;
   } catch { return null; }
 }
 
@@ -274,28 +292,39 @@ export async function fetchCareerBoardBatch({boardId,cursor=null,limit=MAX_BATCH
 }
 
 async function readCareerBoard(board,{sourceId,offset,size,fetchImpl,signal,now,next}) {
-  const response = await requestJson(board.api, {fetchImpl, signal, sourceId});
-  const rows = board.type === 'lever' ? response.data : response.data?.jobs;
+  const paged=board.paged===true||board.type==='smartrecruiters';
+  const apiUrl=new URL(board.api);
+  if(paged){apiUrl.searchParams.set(board.type==='lever'?'skip':'offset',String(offset));apiUrl.searchParams.set('limit',String(Math.min(size,100)));}
+  const response = await requestJson(apiUrl.href, {fetchImpl, signal, sourceId});
+  const rows = board.type === 'lever' ? response.data : board.type==='smartrecruiters'?response.data?.content:response.data?.jobs;
   if (!Array.isArray(rows) || rows.length > 2000 || rows.some(row => !row || typeof row !== 'object' || Array.isArray(row))) throw sourceError(sourceId, 'source_invalid_schema', 'Pasikeitė karjeros šaltinio duomenų struktūra.');
   const warnings = [];
   // Lever supports a bounded request; Ashby's documented public API is a complete
   // board response. The byte and row caps above bound that non-paginated response.
-  if (board.type === 'lever' && rows.length >= MAX_BATCH) warnings.push(`${board.provider}: pasiekta 250 skelbimų vieno karjeros puslapio riba; dalis pozicijų gali būti neįtraukta.`);
+  if (board.type === 'lever' && !paged && rows.length >= MAX_BATCH) warnings.push(`${board.provider}: pasiekta 250 skelbimų vieno karjeros puslapio riba; dalis pozicijų gali būti neįtraukta.`);
   const seen = new Set();
   const matching = [];
   for (const row of rows) {
     const id = clean(row.id);
-    const title = clean(board.type === 'lever' ? row.text : row.title);
+    const title = clean(board.type === 'lever' ? row.text : board.type==='smartrecruiters'?row.name:row.title);
     const location = careerLocation(row, board);
-    const url = verifiedJobUrl(board.type === 'lever' ? row.hostedUrl : row.jobUrl, board);
+    const candidateUrl=board.type==='lever'?row.hostedUrl:board.type==='greenhouse'?row.absolute_url:board.type==='smartrecruiters'&&/^\d+$/.test(id)?`https://${board.jobHost}${board.path}${id}`:row.jobUrl;
+    const url = verifiedJobUrl(candidateUrl, board);
+    if(board.type==='greenhouse'&&row.internal_job_id===null)continue;
+    const expires=dateOnly(row.application_deadline)?row.application_deadline+'T23:59:59.999Z':timestamp(row.application_deadline);
+    if(expires&&Date.parse(expires)<now.getTime())continue;
     if (!id || !title || location === null || !url || row.isListed === false || seen.has(id)) continue;
     if(board.id&&/talent pool|future (?:opportunit|position|role)|general application|spontaneous application|open application|join.{0,20}talent|^apply here: future\b|didn.t find your role/iu.test(title))continue;
     seen.add(id);
-    matching.push({source_id: sourceId, source_job_id: `${board.provider.toLowerCase()}:${id}`, company_code: null, provider: board.provider, title, city_area: location, url, status: 'open', published_at: timestamp(board.type === 'lever' ? row.createdAt : row.publishedAt), source_updated_at: response.sourceUpdatedAt, expires_at: null});
+    matching.push({source_id: sourceId, source_job_id: `${board.provider.toLowerCase()}:${id}`, company_code: null, provider: board.provider, title, city_area: location, url, status: 'open', published_at: timestamp(board.type === 'lever' ? row.createdAt : board.type==='greenhouse'?row.first_published:board.type==='smartrecruiters'?row.releasedDate:row.publishedAt), source_updated_at: timestamp(row.updated_at)||response.sourceUpdatedAt, expires_at: expires});
   }
   matching.sort((a, b) => (b.published_at || '').localeCompare(a.published_at || '') || a.source_job_id.localeCompare(b.source_job_id));
-  const jobs = matching.slice(offset, offset + size);
-  const nextCursor = next(offset + size < matching.length ? offset + size : null);
+  const jobs = paged?matching.slice(0,size):matching.slice(offset, offset + size);
+  const pageLimit=Math.min(size,100);
+  if(board.type==='smartrecruiters'&&(!Number.isSafeInteger(response.data.totalFound)||response.data.totalFound<0))throw sourceError(sourceId,'source_invalid_schema','Pasikeitė puslapiavimo duomenys.');
+  const more=paged?(board.type==='smartrecruiters'?offset+rows.length<response.data.totalFound:rows.length===pageLimit):offset+size<matching.length;
+  if(paged&&more&&!rows.length)throw sourceError(sourceId,'source_invalid_schema','Tuščias tarpinis šaltinio puslapis.');
+  const nextCursor = next(more?offset+(paged?rows.length:size):null);
   const companies = jobs.length ? [{company_code: null, provider: board.provider, legal_form: '', city_area: uniqueText(jobs.map(job => job.city_area)), address: '', profile_url: board.official, source_url: board.official, registered_at: null, source_id: sourceId, company_phone: '', company_email: ''}] : [];
   return {sourceId, status: 'ok', companies, jobs, nextCursor, sourceUpdatedAt: response.sourceUpdatedAt, fetchedAt: now.toISOString(), warnings, rawCount: rows.length, observedLatestDate: matching[0]?.published_at || null, employer: board.provider, listingMeaning: 'Šiuo tikrinimu viešai skelbiamos darbdavio karjeros pozicijos; vietos užpildymas nepriklausomai nepatvirtintas.'};
 }

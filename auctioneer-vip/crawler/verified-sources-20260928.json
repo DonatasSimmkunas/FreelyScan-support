@@ -1,0 +1,181 @@
+{
+  "verifiedAt": "2026-09-28",
+  "sources": [
+    {
+      "id": "careers_scale3c",
+      "provider": "ScaleTech",
+      "type": "lever",
+      "official": "https://jobs.lever.co/scale3c/",
+      "api": "https://api.lever.co/v0/postings/scale3c?mode=json&limit=250",
+      "jobHost": "jobs.lever.co",
+      "path": "/scale3c/",
+      "paged": true
+    },
+    {
+      "id": "careers_palantir",
+      "provider": "Palantir",
+      "type": "lever",
+      "official": "https://jobs.lever.co/palantir/",
+      "api": "https://api.lever.co/v0/postings/palantir?mode=json&limit=250",
+      "jobHost": "jobs.lever.co",
+      "path": "/palantir/",
+      "paged": true
+    },
+    {
+      "id": "careers_transfergo",
+      "provider": "TransferGo",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/transfergo/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/transfergo/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/transfergo/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_wargamingen",
+      "provider": "Wargaming",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/wargamingen/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/wargamingen/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/wargamingen/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_robinhood",
+      "provider": "Robinhood",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/robinhood/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/robinhood/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/robinhood/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_wrike",
+      "provider": "Wrike",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/wrike/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/wrike/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/wrike/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_tide",
+      "provider": "Tide",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/tide/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/tide/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/tide/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_flohealth",
+      "provider": "Flo Health",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/flohealth/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/flohealth/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/flohealth/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_ignitisgroup",
+      "provider": "Ignitis grupė",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/Ignitisgroup/",
+      "api": "https://api.smartrecruiters.com/v1/companies/Ignitisgroup/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/Ignitisgroup/"
+    },
+    {
+      "id": "careers_jyskbaltics",
+      "provider": "JYSK Baltics",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/JYSKBaltics/",
+      "api": "https://api.smartrecruiters.com/v1/companies/JYSKBaltics/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/JYSKBaltics/"
+    },
+    {
+      "id": "careers_continental",
+      "provider": "Continental",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/Continental/",
+      "api": "https://api.smartrecruiters.com/v1/companies/Continental/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/Continental/"
+    },
+    {
+      "id": "careers_betsson",
+      "provider": "Betsson",
+      "type": "greenhouse",
+      "official": "https://job-boards.greenhouse.io/betsson/",
+      "api": "https://boards-api.greenhouse.io/v1/boards/betsson/jobs",
+      "jobHost": "job-boards.greenhouse.io",
+      "path": "/betsson/",
+      "jobHosts": [
+        "job-boards.greenhouse.io",
+        "boards.greenhouse.io"
+      ]
+    },
+    {
+      "id": "careers_evolution",
+      "provider": "Evolution",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/Evolution/",
+      "api": "https://api.smartrecruiters.com/v1/companies/Evolution/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/Evolution/"
+    },
+    {
+      "id": "careers_hmgroup",
+      "provider": "H&M Group",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/HMGroup/",
+      "api": "https://api.smartrecruiters.com/v1/companies/HMGroup/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/HMGroup/"
+    },
+    {
+      "id": "careers_devoteam",
+      "provider": "Devoteam",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/Devoteam/",
+      "api": "https://api.smartrecruiters.com/v1/companies/Devoteam/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/Devoteam/"
+    },
+    {
+      "id": "careers_nielseniq",
+      "provider": "NielsenIQ",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/NielsenIQ/",
+      "api": "https://api.smartrecruiters.com/v1/companies/NielsenIQ/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/NielsenIQ/"
+    }
+  ],
+  "evidence": "Public ATS endpoints fetched successfully; only sources with explicit Lithuanian location records included.",
+  "excluded": "403, 404 and sources without Lithuanian positions excluded. No access controls bypassed."
+}

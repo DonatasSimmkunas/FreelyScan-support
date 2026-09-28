@@ -90,3 +90,11 @@ Sesijos ir bandymų ribojimas laikomi vieno serverio atmintyje: perkrovimas pana
 ## Viešų failų versijos
 
 Po `public/` JavaScript ar CSS pakeitimų paleisti `node scripts/build-public-assets.mjs` prieš publikavimą. Jis sukuria turinio maiša pažymėtus failus, atnaujina HTML nuorodas, crawlerio priklausomybę nuo app modulio ir serverio leidžiamų failų sąrašą. Šie generuoti vieši failai įrašomi į abi Git šakas. Atskiros failų versijos neleidžia naršyklei sujungti seno skripto su nauju HTML.
+
+### Source expansion — 2026-09-28
+
+The collector now covers 24 employer boards (23 source states; Oxylabs and Hostinger retain their shared legacy cursor). Six sources at most are fetched each quarter-hour, oldest checked first, with at most three concurrent requests and the existing global lease/deadline. Deferred sources keep their cursor and receive priority next cycle. Full coverage normally takes about one hour; multi-page sources progress over subsequent cycles.
+
+Greenhouse public Job Board and SmartRecruiters public Posting API adapters supplement Lever and Ashby. Only explicit Lithuanian locations are included. Greenhouse prospect entries, expired postings, unlisted jobs and general talent pools are excluded. New Lever and SmartRecruiters sources advance server-side page offsets, including pages without matching Lithuanian records. No phone numbers or legal company codes are inferred.
+
+`crawler/verified-sources-20260928.json` records the new public feeds; `crawler/seed-sources-20260928.sql` adds their private source-state rows idempotently without reactivating retired sources. Deploy `crawler/edge.mjs` and `lib/crawler-sources.mjs` together to the existing isolated VIP Edge Function, replacing the token hash placeholder securely. The main Auctioneer site is unaffected.

@@ -51,7 +51,7 @@ export function createCrawlerHandler({env=key=>globalThis.Deno?.env.get(key),fet
     const query=new URLSearchParams({id:'eq.1',lease_until:'lt.'+startedIso,or:'(last_started_at.is.null,last_started_at.lt.'+new Date(started-60000).toISOString()+')'});
     const lease=await runDb('vip_crawler_control?'+query,{method:'PATCH',representation:true,body:{lease_owner:runId,lease_until:new Date(started+180000).toISOString(),last_started_at:startedIso}});
     if(!lease?.length){const current=await runDb('rpc/vip_crawler_status',{method:'POST',body:{}});throw new RequestError(current?.running?409:429,current?.running?'Rinkimas jau vyksta.':'Palaukite bent minutę prieš kitą rinkimą.');}
-    const summary=[];let totalNew=0,totalCompanies=0,totalJobs=0;
+    const summary=[];let batchesStarted=0;let totalNew=0,totalCompanies=0,totalJobs=0;
     try{
       await runDb('vip_crawler_runs',{method:'POST',body:{id:runId,started_at:startedIso}});
       const states=await runDb('vip_crawler_sources?select=id,cursor,status,retry_after,last_checked');
@@ -59,6 +59,8 @@ export function createCrawlerHandler({env=key=>globalThis.Deno?.env.get(key),fet
         const source=states.find(s=>s.id===sourceId);
         if(['blocked','removed'].includes(source?.status))return{id:sourceId,status:source.status,error:'Šaltinis pašalintas iš aktyvaus rinkimo. Išsaugoti duomenys palikti.'};
         if(Date.parse(source?.retry_after||'')>now())return{id:sourceId,status:'cooldown',error:'Laukiama šaltinio nurodyto pakartotinės užklausos laiko.'};
+        if(batchesStarted>=6)return{id:sourceId,status:'queued',error:'Šaltinis laukia kito 15 minučių ciklo.'};
+        batchesStarted++;
         const remaining=75000-(now()-started);
         if(remaining<6000)return{id:sourceId,status:'skipped',error:'Pasiektas vieno rinkimo laiko limitas.'};
         try{
@@ -84,7 +86,7 @@ export function createCrawlerHandler({env=key=>globalThis.Deno?.env.get(key),fet
         while(nextSource<orderedSources.length){const index=nextSource++;summary[index]=await collect(orderedSources[index]);}
       }));
       const finished=new Date(now()).toISOString(),ok=summary.filter(s=>s.status==='ok').length;
-      await runDb('vip_crawler_runs?id=eq.'+runId,{method:'PATCH',body:{finished_at:finished,status:ok===sources.length?'ok':ok?'partial':'error',new_companies:totalNew,companies_seen:totalCompanies,jobs_seen:totalJobs,summary}});
+      await runDb('vip_crawler_runs?id=eq.'+runId,{method:'PATCH',body:{finished_at:finished,status:ok===summary.filter(s=>s.status!=='queued').length?'ok':ok?'partial':'error',new_companies:totalNew,companies_seen:totalCompanies,jobs_seen:totalJobs,summary}});
     }catch{
       try{await runDb('vip_crawler_runs?id=eq.'+runId,{method:'PATCH',body:{finished_at:new Date(now()).toISOString(),status:'error',new_companies:totalNew,companies_seen:totalCompanies,jobs_seen:totalJobs,summary}});}catch{}
       throw new RequestError(503,'Rinkimas laikinai nepasiekiamas. Pabandykite vėliau.');

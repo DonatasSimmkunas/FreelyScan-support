@@ -3,6 +3,7 @@ import {createDecipheriv} from 'node:crypto';
 import {gunzipSync} from 'node:zlib';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {applyProviderDetails} from './provider-details.mjs';
 import {createCatalog} from './catalog.mjs';
 import {createEmployerCatalog} from './employers.mjs';
 import {createAuth} from './auth.mjs';
@@ -67,7 +68,14 @@ export async function createVipHandler(env=process.env){
   decipher.setAuthTag(encrypted.subarray(16,32));
   const plaintext=Buffer.concat([decipher.update(encrypted.subarray(32)),decipher.final()]);
   const payload=JSON.parse((format==='VIP2'?gunzipSync(plaintext):plaintext).toString('utf8'));
-  const catalog=createCatalog(Array.isArray(payload)?payload:payload.providers);
+  let providerDetails=[];
+  try{
+    const bytes=await readFile(path.join(root,'private/provider-details.enc'));
+    if(bytes.subarray(0,4).toString()!=='VIP2')throw new Error('Neatpažintas paslaugų aprašymų failas.');
+    const decrypt=createDecipheriv('aes-256-gcm',Buffer.from(env.VIP_DATA_KEY,'hex'),bytes.subarray(4,16));decrypt.setAuthTag(bytes.subarray(16,32));
+    providerDetails=JSON.parse(gunzipSync(Buffer.concat([decrypt.update(bytes.subarray(32)),decrypt.final()])).toString('utf8'));
+  }catch(error){if(error.code!=='ENOENT')throw error;}
+  const catalog=createCatalog(applyProviderDetails(Array.isArray(payload)?payload:payload.providers,providerDetails));
   const employerPayload=Array.isArray(payload)?{companies:[],jobs:[],contactSources:[]}:payload.employers;
   const employers=createEmployerCatalog(employerPayload);
   const liveEmployers=createLiveEmployerCatalog(employerPayload,crawler);

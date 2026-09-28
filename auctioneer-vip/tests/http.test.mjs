@@ -61,7 +61,7 @@ test('protected HTTP lifecycle, no unauthenticated catalog and no original-site 
     response=await post('/vip/api/login',{username:'verification',password});assert.equal(response.status,200);
     const cookie=response.headers.get('set-cookie').split(';')[0];assert.match(response.headers.get('set-cookie'),/Secure/);const session=await response.json();
     response=await fetch(base+'/vip/api/metadata',{headers:{Cookie:cookie}});const serviceMeta=await response.json();
-    assert.equal(serviceMeta.categories.length,122);assert.ok(serviceMeta.categories.every(c=>c&&!/^\d{4}-\d{2}-\d{2}$/.test(c)));
+    assert.equal(serviceMeta.categories.length,123);assert.ok(serviceMeta.categories.every(c=>c&&!/^\d{4}-\d{2}-\d{2}$/.test(c)));
     response=await fetch(base+'/vip/api/metadata?niche=employers',{headers:{Cookie:cookie}});const employerMeta=await response.json();
     assert.equal(employerMeta.total,1504);assert.equal(employerMeta.jobsTotal,4393);assert.equal(employerMeta.categories.length,9);
     assert.deepEqual(employerMeta.niches.map(n=>n.total),[5217,1504]);

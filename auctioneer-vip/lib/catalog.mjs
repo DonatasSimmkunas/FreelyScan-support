@@ -11,6 +11,8 @@ export const FIELDS = [
   ['contact_source_url','Kontaktų šaltinio nuoroda','text']
 ].map(([key,label,type])=>({key,label,type}));
 const IMPORT_FIELDS=[
+  ['service_description','Ką daro / teikiamos paslaugos'],
+  ['service_source_url','Paslaugų aprašymo šaltinis'],
   ['additional_source_url','Papildomas šaltinis'],
   ['data_basis','Duomenų pagrindas'],
   ['source_notes','Šaltinio pastabos']

@@ -45,7 +45,7 @@ test('exact-origin static client authenticates with a revocable bearer without c
     response=await fetch(base+'/vip/api/session',{headers});assert.equal(response.status,200);checkAllowed(response);
     assert.deepEqual(await response.json(),{username:'verification',csrf:login.csrf});
     response=await fetch(base+'/vip/api/metadata',{headers});assert.equal(response.status,200);
-    const metadata=await response.json();assert.equal(metadata.total,5217);assert.equal(metadata.fields.length,22);
+    const metadata=await response.json();assert.equal(metadata.total,5217);assert.equal(metadata.fields.length,24);
     response=await fetch(base+'/vip/api/metadata',{headers:{...headers,Origin:evil}});assert.equal(response.status,403);
     response=await post('search',{},headers);assert.equal(response.status,403);
     response=await post('search',{}, {...headers,'X-VIP-CSRF':'wrong'});assert.equal(response.status,403);

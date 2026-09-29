@@ -179,6 +179,31 @@ html,body{max-width:100%;overflow-x:hidden}
 .cookieBar{position:fixed;left:16px;right:16px;bottom:16px;z-index:180;display:none;max-width:920px;margin:auto;background:#08263bf6;color:#fff;border-radius:18px;padding:14px 16px;box-shadow:0 20px 70px #04172555;gap:14px;align-items:center;justify-content:space-between}.cookieBar.show{display:flex}.cookieBar p{margin:0;font-size:12px;line-height:1.45;color:#dceaf0}.cookieBar a{color:#7ce6ef}.cookieActions{display:flex;gap:8px;flex-shrink:0}.cookieActions button{border:1px solid #ffffff40;background:#fff;color:#08263b;padding:9px 13px;border-radius:999px;font-weight:800}.cookieActions .ghost{background:transparent;color:#fff}
 @media(max-width:620px){.cookieBar{left:8px;right:8px;bottom:82px;flex-direction:column;align-items:stretch}.cookieActions{display:grid;grid-template-columns:1fr 1fr}.cookieActions button{width:100%}}
 </style>
+<style id="vent-product-image-bounds-v1">
+/* Keep the product image inside its media box even when the source is tall.
+   A grid item's intrinsic image height previously expanded its implicit row
+   beyond the fixed-height box on narrow screens. */
+.prodPic{
+  display:flex!important;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  min-width:0;
+  flex-shrink:0;
+}
+.prodPic>img[data-brand-product]{
+  display:block;
+  width:100%!important;
+  height:100%!important;
+  min-width:0;
+  min-height:0;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain;
+  object-position:center;
+  flex:0 1 auto;
+}
+</style>
 </head>
 <body><a class="skip" href="#shop">Skip to products</a>
 <div class="topline"><div class="container"><div class="topper"><span>🚚 <b data-t="freeShip">Free shipping on selected orders</b></span><span>🎧 <b data-t="support">Expert support</b></span><span>📦 <b data-t="delivery">EU & Norway delivery</b></span></div><div>VENT IT · Clean Air. Better Living.</div></div></div>

@@ -1,8 +1,8 @@
-# ThanksMap Privacy Policy
+# Little Thanks Privacy Policy
 
 **Effective date: September 30, 2026**
 
-ThanksMap is a private thank-you card creator for iPhone.
+Little Thanks is a private thank-you card creator for iPhone.
 
 ## Data processing
 
@@ -16,11 +16,11 @@ A card can contain:
 - a visual theme;
 - a creation date.
 
-Drafts and saved cards are stored locally on the device using Apple platform storage. ThanksMap does not upload those card contents to a developer-operated server.
+Drafts and saved cards are stored locally on the device using Apple platform storage. Little Thanks does not upload those card contents to a developer-operated server.
 
 ## Sharing and exports
 
-When you use the iOS share sheet or export your cards, you create a copy outside ThanksMap. The destination app, recipient, file service, or device backup may retain that copy under its own terms and settings.
+When you use the iOS share sheet or export your cards, you create a copy outside Little Thanks. The destination app, recipient, file service, or device backup may retain that copy under its own terms and settings.
 
 ## Deleting data
 
@@ -28,12 +28,12 @@ You can delete individual cards, delete all saved cards, and clear the current d
 
 ## Children and sensitive information
 
-ThanksMap is not designed to collect sensitive personal information. Do not include passwords, financial information, health information, precise addresses, government identifiers, or other sensitive details in a card.
+Little Thanks is not designed to collect sensitive personal information. Do not include passwords, financial information, health information, precise addresses, government identifiers, or other sensitive details in a card.
 
 ## Future features
 
-If ThanksMap later adds public posting, cloud sync, analytics, advertising, or payments, this policy will be updated before those features are enabled.
+If Little Thanks later adds public posting, cloud sync, analytics, advertising, or payments, this policy will be updated before those features are enabled.
 
 ## Contact
 
-For privacy questions or support, use the public ThanksMap support page in this repository.
+For privacy questions or support, use the public Little Thanks support page in this repository.

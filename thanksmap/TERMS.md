@@ -1,12 +1,12 @@
-# ThanksMap Terms of Use
+# Little Thanks Terms of Use
 
 **Effective date: September 30, 2026**
 
-ThanksMap is a free iPhone app for creating private thank-you cards and sharing them as images.
+Little Thanks is a free iPhone app for creating private thank-you cards and sharing them as images.
 
 ## Your content
 
-You are responsible for the text you create and share. Do not use ThanksMap for threats, harassment, impersonation, unlawful content, or material you do not have permission to use.
+You are responsible for the text you create and share. Do not use Little Thanks for threats, harassment, impersonation, unlawful content, or material you do not have permission to use.
 
 ## Private by default
 
@@ -18,7 +18,7 @@ This release does not sell public dedications, subscriptions, donations, or othe
 
 ## Local storage
 
-ThanksMap is not a backup service. Export anything important. Data may be lost if the app or device storage is removed or damaged.
+Little Thanks is not a backup service. Export anything important. Data may be lost if the app or device storage is removed or damaged.
 
 ## Availability
 

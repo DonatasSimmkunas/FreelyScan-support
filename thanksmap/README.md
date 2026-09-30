@@ -1,6 +1,6 @@
-# ThanksMap Support
+# Little Thanks Support
 
-ThanksMap is a private, English-language iPhone app for creating and sharing personal thank-you cards.
+Little Thanks is a private, English-language iPhone app for creating and sharing personal thank-you cards.
 
 ## Help
 
@@ -12,14 +12,14 @@ ThanksMap is a private, English-language iPhone app for creating and sharing per
 
 ## Privacy
 
-Read the [ThanksMap Privacy Policy](PRIVACY.md).
+Read the [Little Thanks Privacy Policy](PRIVACY.md).
 
 ## Terms
 
-Read the [ThanksMap Terms of Use](TERMS.md).
+Read the [Little Thanks Terms of Use](TERMS.md).
 
 ## Support
 
-For bugs or product feedback, open an issue in this repository and start the title with **ThanksMap:**.
+For bugs or product feedback, open an issue in this repository and start the title with **Little Thanks:**.
 
-ThanksMap does not currently use accounts, analytics, ads, subscriptions, donations, cloud storage, or public posting.
+Little Thanks does not currently use accounts, analytics, ads, subscriptions, donations, cloud storage, or public posting.

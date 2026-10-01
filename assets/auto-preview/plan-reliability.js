@@ -1,0 +1,57 @@
+(function(root){
+ 'use strict';const G=root.VentPlanGeometry;
+ const VERSION='2026.10-reliability-1';
+ const TYPES=['living','livingKitchen','bedroom','office','kitchen','bathroom','wc','utility','hall','vestibule','technical','other'];
+ const finite=(n,lo,hi)=>typeof n==='number'&&Number.isFinite(n)&&n>=lo&&n<=hi;
+ function fingerprint(state,floorId){const floors=state.floors.filter(f=>f.id===floorId).map(({id,scale,calibrated,envelope,sourceRevision})=>({id,scale,calibrated,envelope,sourceRevision})),rooms=state.rooms.filter(r=>r.floorId===floorId).map(({id,name,type,polygon,x,y,w,hpx,area,areaSource,h,airflow,supplyAirflow,extractAirflow})=>({id,name,type,polygon,x,y,w,hpx,area,areaSource,h,airflow,supplyAirflow,extractAirflow}));let hash=2166136261;for(const c of JSON.stringify({floors,rooms}))hash=Math.imul(hash^c.charCodeAt(0),16777619);return (hash>>>0).toString(16)}
+ function normalize(raw,defaults){
+  if(!raw||typeof raw!=='object'||!Array.isArray(raw.floors)||!raw.floors.length||raw.floors.length>12||!Array.isArray(raw.rooms)||raw.rooms.length>300)throw Error('project_schema');
+  const state={...defaults,...JSON.parse(JSON.stringify(raw)),schemaVersion:2};if(!['lt','en','no'].includes(state.lang))state.lang='en';
+  const ids=new Set();for(const f of state.floors){if(typeof f.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(f.id)||ids.has(f.id))throw Error('floor_id');ids.add(f.id);if(f.bg&&!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(f.bg))throw Error('background_format');if(!finite(f.scale,.0001,2)){f.scale=.012;f.calibrated=false}f.review=f.review||null}
+  const roomIds=new Set();for(const r of state.rooms){if(typeof r.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(r.id)||roomIds.has(r.id)||!ids.has(r.floorId))throw Error('room_id');roomIds.add(r.id);r.name=String(r.name||'').slice(0,80);if(!TYPES.includes(r.type))r.type='other';if(!finite(r.x,0,1000)||!finite(r.y,0,700)||!finite(r.w,1,1000)||!finite(r.hpx,1,700))throw Error('room_geometry');if(r.polygon&&G.polygonIssues(r.polygon).length)throw Error('room_polygon');for(const k of ['area','h','airflow','supplyAirflow','extractAirflow'])if(r[k]!==undefined&&!finite(r[k],0,k==='h'?10:2000))throw Error('room_value')}
+  state.selectedFloorId=ids.has(state.selectedFloorId)?state.selectedFloorId:state.floors[0].id;
+  for(const key of ['terminalOverrides','boxOverrides','calibrationLines'])if(!state[key]||typeof state[key]!=='object'||Array.isArray(state[key]))state[key]={};
+  for(const [id,o] of Object.entries(state.terminalOverrides)){if(!o||typeof o!=='object'||['x','y','airflow'].some(k=>o[k]!==undefined&&!finite(o[k],k==='airflow'?1:0,k==='x'?1000:k==='y'?700:300)))throw Error('terminal_override')}
+  for(const [id,o] of Object.entries(state.boxOverrides)){if(!o||!finite(o.x,0,1000)||!finite(o.y,0,700))throw Error('box_override')}
+  for(const key of ['extraTerminals','removedTerminals','noGoZones'])if(!Array.isArray(state[key]))state[key]=[];
+  if(state.noGoZones.some(z=>!ids.has(z.floorId)||!finite(z.x,0,1000)||!finite(z.y,0,700)||!finite(z.w,1,1000)||!finite(z.h,1,700)))throw Error('zone_geometry');
+  if(state.extraTerminals.some(t=>!roomIds.has(t.roomId)||!['supply','extract'].includes(t.role)||!finite(t.x,0,1000)||!finite(t.y,0,700)||!finite(t.airflow,1,300)))throw Error('terminal_geometry');
+  if(!state.unit||!ids.has(state.unit.floorId)||!finite(state.unit.x,-100,1000)||!finite(state.unit.y,-100,700))state.unit={floorId:state.floors[0].id,x:-100,y:-100};
+  return state;
+ }
+ function scaleFromLine(line){const px=Math.hypot(line.x2-line.x1,line.y2-line.y1);return finite(line.meters,.1,100)&&px>=20&&px<=1250?line.meters/px:null}
+ function audit(state,{terminals=[],routes=[],trunks=[],boxes=[],maxRoute=25,maxBends=8}={}){
+  const issues=[];const add=(code,severity,ref='',detail='')=>issues.push({code,severity,ref,detail});
+  if(!state.rooms.length)add('rooms_missing','error');
+  const active=state.floors.filter(f=>state.rooms.some(r=>r.floorId===f.id));
+  for(const f of active){const rooms=state.rooms.filter(r=>r.floorId===f.id),line=state.calibrationLines?.[f.id],scale=line&&scaleFromLine(line);
+   if(!f.calibrated||!scale||!finite(f.scale,.0001,2)||Math.abs(scale-f.scale)/f.scale>.01)add('scale_invalid','error',f.id);
+   if(f.secondaryCalibration){const second=scaleFromLine(f.secondaryCalibration);if(!second||!scale||Math.abs(second-scale)/scale>.05)add('scale_disagreement','error',f.id)}else add('scale_second_missing','warning',f.id);
+   if(f.bg&&(!f.review||f.review.fingerprint!==fingerprint(state,f.id))&&(!f.automaticGeometryReview||f.automaticGeometryReview.fingerprint!==fingerprint(state,f.id)))add('floor_unreviewed','error',f.id);
+   if(f.review?.roomCount!==undefined&&f.review.roomCount!==rooms.length)add('room_count_changed','error',f.id);
+   if(!f.envelope)add('envelope_missing','error',f.id);else if(G.polygonIssues(f.envelope).length)add('envelope_invalid','error',f.id);
+   for(const r of rooms){const poly=G.outline(r);for(const code of G.polygonIssues(poly))add(code,'error',r.id);if(r.x<0||r.y<0||r.x+r.w>1000||r.y+r.hpx>700)add('room_bounds','error',r.id);
+    if(!TYPES.includes(r.type)||r.type==='other')add('room_type_unknown','error',r.id);
+    if(!finite(r.area,.5,1000))add('area_unknown','error',r.id);
+    if(!finite(r.h,1.8,6))add('height_invalid','error',r.id);
+    if(f.envelope&&!G.polygonIssues(poly).length&&!G.polygonIssues(f.envelope).length&&poly.some((p,i)=>!G.segmentContained(p,poly[(i+1)%poly.length],f.envelope)))add('room_outside','error',r.id);
+    if(f.calibrated&&r.area>0&&['drawing','manual'].includes(r.areaSource)){const calc=G.area(poly)*f.scale*f.scale;if(Math.abs(calc-r.area)/Math.max(calc,r.area)>.15)add('area_disagreement','error',r.id,calc.toFixed(2))}
+    const ts=terminals.filter(t=>t.roomId===r.id);for(const kind of ['supply','extract']){const expected=r.type==='livingKitchen'?Number(kind==='supply'?r.supplyAirflow??r.airflow:r.extractAirflow??45):(['living','bedroom','office'].includes(r.type)?kind==='supply':['kitchen','bathroom','wc','utility','technical'].includes(r.type)?kind==='extract':false)?Number(r.airflow):0;const actual=ts.filter(t=>t.role===kind).reduce((n,t)=>n+t.airflow,0);if(!Number.isFinite(expected)||Math.abs(actual-expected)>.5)add('room_flow_mismatch','error',r.id,kind)}
+   }
+   for(let i=0;i<rooms.length;i++)for(let j=i+1;j<rooms.length;j++){const a=G.outline(rooms[i]),b=G.outline(rooms[j]);if(G.overlapArea(a,b)>Math.max(2,Math.min(G.area(a),G.area(b))*.005))add('rooms_overlap','error',rooms[i].id,rooms[j].id)}
+   if(active.length>1&&f.id!==state.unit.floorId&&(!f.riser||!rooms.some(r=>G.contains(f.riser,G.outline(r)))))add('riser_missing','error',f.id);
+  }
+  const unitRoom=state.rooms.find(r=>r.floorId===state.unit.floorId&&G.contains(state.unit,G.outline(r)));if(!unitRoom)add('unit_outside','error');else if(!['utility','technical'].includes(unitRoom.type))add('unit_service_room','warning',unitRoom.id);
+  if(state.noGoZones.some(z=>z.floorId===state.unit.floorId&&G.contains(state.unit,G.outline({x:z.x,y:z.y,w:z.w,hpx:z.h}))))add('unit_in_zone','error');
+  for(const t of terminals){const r=state.rooms.find(r=>r.id===t.roomId);if(!r||!G.inside(t,G.outline(r)))add('terminal_outside','error',t.id);else if(G.boundaryDistance(t,G.outline(r))<6)add('terminal_wall_clearance','error',t.id);if(!finite(t.airflow,1,300)||!finite(t.lines,1,20)||!Number.isInteger(t.lines)||![75,90].includes(t.diameter)||t.airflow/t.lines>(t.diameter===75?30:50))add('terminal_flow_invalid','error',t.id);const velocity=(t.airflow/t.lines/3600)/(Math.PI*(t.diameter/1000)**2/4);if(velocity>3)add('velocity_review','warning',t.id,velocity.toFixed(2));const route=routes.find(r=>r.id===t.id&&r.valid);if(!route)add('terminal_route_missing','error',t.id);else if(Math.hypot(route.pts.at(-1)?.[0]-t.x,route.pts.at(-1)?.[1]-t.y)>.1)add('route_endpoint','error',t.id)}
+  for(let i=0;i<terminals.length;i++)for(let j=i+1;j<terminals.length;j++){const a=terminals[i],b=terminals[j];if(a.floorId!==b.floorId)continue;const f=state.floors.find(f=>f.id===a.floorId),distance=Math.hypot(a.x-b.x,a.y-b.y);if(distance<18)add('terminal_collision','error',a.id,b.id);else if(a.roomId===b.roomId&&a.role!==b.role&&f?.calibrated&&distance*f.scale<1.5)add('mixed_short_circuit','warning',a.id,b.id)}
+  for(const box of boxes){const floor=state.floors.find(f=>f.id===box.floorId);if(floor?.envelope&&!G.contains(box,floor.envelope)||!state.rooms.some(r=>r.floorId===box.floorId&&G.contains(box,G.outline(r))))add('box_outside','error',box.floorId+':'+box.role)}
+  for(const r of [...routes,...trunks]){const f=state.floors.find(f=>f.id===r.floorId);if(!r.valid)add('route_blocked','error',r.id||r.floorId);else{for(const code of G.pathIssues(r.pts,f?.envelope,state.noGoZones.filter(z=>z.floorId===r.floorId)))add(code,'error',r.id||r.floorId);if(!finite(r.length,0,500))add('route_length_invalid','error',r.id||r.floorId);if(r.length>maxRoute)add('route_too_long','warning',r.id||r.floorId);if(r.bends>maxBends)add('route_many_bends','warning',r.id||r.floorId)}}
+  const s=terminals.filter(t=>t.role==='supply').reduce((n,t)=>n+t.airflow,0),e=terminals.filter(t=>t.role==='extract').reduce((n,t)=>n+t.airflow,0);if(!s||!e||Math.abs(s-e)/Math.max(s,e)>.1)add('air_balance','error');
+  if(active.length>1&&!finite(state.verticalLength,.1,100))add('vertical_length_missing','error');
+  if(!state.assumptions?.service)add('service_unconfirmed','warning');if(!state.assumptions?.transfer)add('transfer_unconfirmed','warning');
+  add('engineering_review','review');return {version:VERSION,issues,errors:issues.filter(i=>i.severity==='error').length,warnings:issues.filter(i=>i.severity==='warning').length,ready:!issues.some(i=>i.severity==='error'),scope:'preliminary'};
+ }
+ function quantities(state,routes,trunks,boxes){const calibrated=id=>{const f=state.floors.find(f=>f.id===id);const scale=state.calibrationLines?.[id]&&scaleFromLine(state.calibrationLines[id]);return f?.calibrated&&finite(f.scale,.0001,2)&&scale&&Math.abs(scale-f.scale)/f.scale<=.01};const valid=routes.filter(r=>r.valid&&calibrated(r.floorId)),main=trunks.filter(r=>r.valid&&calibrated(r.floorId));const rounded=n=>Math.round(n*1e6)/1e6;const reserve=finite(state.materialReservePct,0,30)?state.materialReservePct:10,raw={75:0,90:0};valid.forEach(r=>{if(Number.isFinite(r.length)&&Number.isFinite(r.lines)&&raw[r.diameter]!==undefined)raw[r.diameter]+=r.length*r.lines});raw[75]=rounded(raw[75]);raw[90]=rounded(raw[90]);const vertical=state.floors.filter(f=>state.rooms.some(r=>r.floorId===f.id)).length>1&&finite(state.verticalLength,.1,100)?state.verticalLength*2:0,rawMain=rounded(main.reduce((n,r)=>n+r.length,0)+vertical);return {raw75:raw[75],raw90:raw[90],buy75:Math.ceil(raw[75]*(1+reserve/100)),buy90:Math.ceil(raw[90]*(1+reserve/100)),rawMain,buyMain:Math.ceil(rawMain*(1+reserve/100)),vertical,reserve,boxes:boxes.length,lines:valid.reduce((n,r)=>n+r.lines,0),bendPositions:valid.reduce((n,r)=>n+r.bends*r.lines,0)+main.reduce((n,r)=>n+r.bends,0),routes:valid,incomplete:routes.some(r=>!r.valid||!calibrated(r.floorId))||trunks.some(r=>!r.valid||!calibrated(r.floorId))};}
+ root.VentPlanReliability={VERSION,TYPES,fingerprint,normalize,scaleFromLine,audit,quantities};
+})(typeof window==='undefined'?globalThis:window);

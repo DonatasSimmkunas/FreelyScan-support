@@ -18,5 +18,22 @@ function cropBounds(pixels,width,height){if(width<40||height<40||width*height>5e
  if(!best)return null;const pad=Math.max(8,Math.round(Math.max(best.w,best.h)*.045));const x=Math.max(0,best.x-pad),y=Math.max(0,best.y-pad),w=Math.min(width,best.x+best.w+pad)-x,h=Math.min(height,best.y+best.h+pad)-y;if(w*h>width*height*.94)return null;return {x:x/width,y:y/height,w:w/width,h:h/height,source:'structural-lines'} }
 function envelope(rooms){if(!rooms.length)return null;const w=500,h=350,mask=new Uint8Array(w*h);for(const r of rooms){const poly=r.polygon;for(let y=0;y<h;y++){const yy=y*2+1,cross=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];if((a.y>yy)!==(b.y>yy))cross.push(a.x+(yy-a.y)*(b.x-a.x)/(b.y-a.y))}cross.sort((a,b)=>a-b);for(let i=0;i+1<cross.length;i+=2)for(let x=Math.max(0,Math.floor(cross[i]/2));x<Math.min(w,Math.ceil(cross[i+1]/2));x++)mask[y*w+x]=1}}let joined=D.closeAxis(D.closeAxis(mask,w,h,12,false),w,h,12,true);const expanded=joined.slice();for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++)if(joined[y*w+x])for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)expanded[(y+dy)*w+x+dx]=1;const regions=D.components(expanded,w,h,1);const largest=regions.regions.sort((a,b)=>b.count-a.count)[0];if(!largest)return null;const polygon=D.simplify(D.contour(regions.labels,w,h,largest,2),2);return G.validPolygon(polygon)&&rooms.every(r=>r.polygon.every(p=>G.contains(p,polygon)))?polygon:null}
 function autoReadiness(result){const reasons=[];if(!result.geometryComplete)reasons.push('incomplete_geometry');if(result.unknownUses?.length)reasons.push('missing_room_uses');if(!result.scale?.scale)reasons.push('missing_scale');if(result.scale?.estimated)reasons.push('estimated_scale');if(result.rooms?.some(r=>r.areaMismatch))reasons.push('area_mismatch');return {canDraw:result.geometryComplete,canDesign:reasons.length===0,reasons}}
-root.VentPlanAuto={VERSION,median,roomCode,numeric,anchors,legend,annotate,inferScale,inferDimensions,select,detect,cropBounds,envelope,autoReadiness};
+// Explicit user input completes missing semantics without changing detected geometry.
+function prepareInputs(rooms,choices,unitId,defaults){
+ const errors=[],ids=new Set(rooms.map(r=>r.id));
+ if(!rooms.length)errors.push('rooms_missing');
+ if(!ids.has(unitId))errors.push('unit_room_missing');
+ const next=rooms.map(r=>{const type=choices[r.id];if(!Object.hasOwn(defaults,type)||type==='other'){errors.push('room_use:'+r.id);return {...r}}return {...r,type,airflow:defaults[type],supplyAirflow:type==='livingKitchen'?defaults[type]:undefined,extractAirflow:type==='livingKitchen'?45:undefined,useSource:'user-confirmed'}});
+ const direction=type=>type==='livingKitchen'?'mixed':['living','bedroom','office'].includes(type)?'supply':['kitchen','bathroom','wc','utility','technical'].includes(type)?'extract':'transit';
+ const sum=kind=>next.reduce((n,r)=>n+(direction(r.type)==='mixed'?r[kind+'Airflow']:direction(r.type)===kind?r.airflow:0),0);
+ let supply=sum('supply'),extract=sum('extract');
+ if(!supply||!extract)errors.push('air_directions_missing');
+ if(errors.length)return {errors};
+ const lower=supply<extract?'supply':'extract',factor=Math.max(supply,extract)/Math.min(supply,extract);
+ for(const r of next){const d=direction(r.type),key=d==='mixed'?lower+'Airflow':'airflow';if(d===lower||d==='mixed')r[key]=Number((r[key]*factor).toFixed(2));if(r.airflow>300||r.supplyAirflow>300||r.extractAirflow>300)errors.push('flow_limit:'+r.id)}
+ const unitRoom=next.find(r=>r.id===unitId),point=G.interiorPoint(unitRoom,{x:unitRoom.x+unitRoom.w/2,y:unitRoom.y+unitRoom.hpx/2},20);
+ if(!point||!G.contains(point,G.outline(unitRoom)))errors.push('unit_room_invalid');
+ return {errors,rooms:next,unit:point?{...point,floorId:unitRoom.floorId,roomId:unitId,source:'user-room-selection'}:null,supply:sum('supply'),extract:sum('extract')};
+}
+root.VentPlanAuto={VERSION,median,roomCode,numeric,anchors,legend,annotate,inferScale,inferDimensions,select,detect,cropBounds,envelope,autoReadiness,prepareInputs};
 })(typeof window==='undefined'?globalThis:window);

@@ -14,13 +14,14 @@
   const step=2,w=width/step,h=height/step,gray=new Uint8Array(w*h),hist=new Uint32Array(256);let sum=0;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const k=((y*step)*width+x*step)*4,a=pixels[k+3]/255,l=Math.round((.2126*pixels[k]+.7152*pixels[k+1]+.0722*pixels[k+2])*a+255*(1-a));gray[y*w+x]=l;hist[l]++;sum+=l}
   let sumBack=0,countBack=0,best=0,threshold=110;for(let t=0;t<255;t++){countBack+=hist[t];sumBack+=t*hist[t];if(!countBack||countBack===gray.length)continue;const countFore=gray.length-countBack,d=sumBack/countBack-(sum-sumBack)/countFore,v=countBack*countFore*d*d;if(v>best){best=v;threshold=t}}
-  threshold=Math.max(65,Math.min(190,threshold));const base=Uint8Array.from(gray,g=>g<=threshold?1:0),dark=base.reduce((n,x)=>n+x,0)/base.length;
+  threshold=Math.max(65,Math.min(140,threshold));const base=Uint8Array.from(gray,g=>g<=threshold?1:0),dark=base.reduce((n,x)=>n+x,0)/base.length;
   if(dark<.002||dark>.4)return {rooms:[],reason:'raster_contrast',threshold,density:dark};
   // Discard tiny disconnected marks; long walls and attached labels remain evidence.
   // Main walls have stroke thickness; isolated text / furniture hairlines do not.
-  const original=base.slice();for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const k=y*w+x;if(!original[k])continue;let neighbors=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)neighbors+=original[(y+dy)*w+x+dx];if(neighbors<5)base[k]=0}
+  const original=base.slice();for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const k=y*w+x;if(!original[k])continue;let neighbors=0;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)neighbors+=original[(y+dy)*w+x+dx];if(neighbors<8)base[k]=0}
+  const cores=base.slice();for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const k=y*w+x;if(!original[k]||cores[k])continue;let nearby=false;for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(cores[(y+dy)*w+x+dx])nearby=true;if(nearby)base[k]=1}
   const ink=components(base,w,h,1);for(let k=0;k<base.length;k++)if(base[k]&&ink.regions[ink.labels[k]].count<8)base[k]=0;
-  const radius=Math.max(0,Math.min(40,Math.round(gap/step))),mask=closeAxis(closeAxis(base,w,h,radius,false),w,h,radius,true),free=components(mask,w,h,0),rooms=[];
+  const radius=Math.max(0,Math.min(60,Math.round(gap/step))),mask=closeAxis(closeAxis(base,w,h,radius,false),w,h,radius,true),free=components(mask,w,h,0),rooms=[];
   for(const region of free.regions){if(region.edge||region.count*step*step<minimumArea||(region.maxX-region.minX)*step<25||(region.maxY-region.minY)*step<25)continue;const raw=contour(free.labels,w,h,region,step);if(raw.length<3)continue;let polygon=simplify(raw,2);if(polygon.length>40)polygon=simplify(raw,4);if(G.polygonIssues(polygon).length)continue;const actual=region.count*step*step,shape=G.area(polygon);if(Math.abs(shape-G.area(raw))/shape>.025||actual/shape<.65)continue;
    let supported=0,total=0;for(let i=0;i<polygon.length;i++){const a=polygon[i],b=polygon[(i+1)%polygon.length],n=Math.ceil(Math.hypot(a.x-b.x,a.y-b.y)/4);for(let j=0;j<=n;j++){const x=Math.round((a.x+(b.x-a.x)*j/n)/step),y=Math.round((a.y+(b.y-a.y)*j/n)/step);let hit=false;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)if(x+dx>=0&&y+dy>=0&&x+dx<w&&y+dy<h&&base[(y+dy)*w+x+dx])hit=true;total++;if(hit)supported++}}
    const wallSupport=supported/Math.max(1,total);if(wallSupport<.65)continue;const bounds=G.boundsOf(polygon);rooms.push({...bounds,polygon,name:'',type:'other',areaM2:null,wallSupport:Number(wallSupport.toFixed(3)),method:'local-walls',geometryReviewed:false,labelReviewed:false});

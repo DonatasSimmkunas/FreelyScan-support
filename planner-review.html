@@ -180,11 +180,12 @@ body.hasUploadedPlan .stats{padding-top:7px;padding-bottom:9px}
   </div>
 </div></div>
 <div class="toast" id="toast"></div><div class="plannerCookieBar" id="plannerCookieBar"><p id="plannerCookieText">Essential storage keeps your project and language preferences. Optional anonymous analytics help us improve the Planner. <a href="cookies.html">Details</a>.</p><div class="acts"><button id="plannerCookieReject" class="ghost" onclick="plannerConsent('denied')">Essential only</button><button id="plannerCookieAccept" onclick="plannerConsent('granted')">Allow analytics</button></div></div>
-<script src="assets/planner-review/plan-geometry.js?v=20261001-reliability"></script>
-<script src="assets/planner-review/plan-raster.js?v=20261001-reliability"></script>
-<script src="assets/planner-review/plan-routing.js?v=20261001-reliability"></script>
-<script src="assets/planner-review/plan-reliability.js?v=20261001-reliability"></script>
-<script src="assets/planner-review/plan-reliability-ui.js?v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-geometry.js?20261001-v2=v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-ocr.js?20261001-v2=v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-raster.js?20261001-v2=v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-routing.js?20261001-v2=v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-reliability.js?20261001-v2=v=20261001-reliability"></script>
+<script src="assets/planner-review/plan-reliability-ui.js?20261001-v2=v=20261001-reliability"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -576,7 +577,7 @@ async function useFile(){
   state.extraTerminals=(state.extraTerminals||[]).filter(x=>!stale.includes(x.roomId));
   state.removedTerminals=(state.removedTerminals||[]).filter(id=>!stale.some(rid=>id.startsWith('t'+rid+'_')));
   delete state.boxOverrides[f.id+':supply'];delete state.boxOverrides[f.id+':extract'];
-  f.riser=null;state.unit={floorId:f.id,x:-100,y:-100};selected=null;
+  f.riser=null;state.noGoZones=state.noGoZones.filter(z=>z.floorId!==f.id);if(state.unit.floorId===f.id)state.unit={floorId:f.id,x:-100,y:-100};selected=null;
   state.recognition={floorId:f.id,reviewed:false,uncertainties:[]};
   closeUpload();saveSilent();render();toast(t('bgLoaded'));
  }catch(e){console.error(e);toast(e.message||t('planInvalid'))}finally{button.disabled=false}
@@ -619,7 +620,7 @@ async function recognize(){
   const response=await fetch('https://fihyzcabvrndsztlsufg.supabase.co/functions/v1/recognize-vent-plan',{
    method:'POST',signal:controller.signal,headers:{'content-type':'application/json','authorization':'Bearer '+auth.access_token,'apikey':window.__VENT_CONFIG__.supabasePublishableKey},body:JSON.stringify({image:f.bg,documentText:f.documentText||''})
   });
-  const draft=await response.json();if(state!==targetState||f.bg!==targetImage||VentPlanReliability.fingerprint(state,f.id)!==targetFingerprint)return;if(draft.error==='recognition_not_configured')throw Error({lt:'Automatinis atpažinimas šiuo metu neaktyvus. Naudok „Apibrėžti pagal sienas“.',en:'Automatic recognition is unavailable. Use Trace walls to outline each room.',no:'Automatisk gjenkjenning er utilgjengelig. Bruk Trace walls.'}[state.lang]);if(!response.ok)throw Error((t(draft.error)||draft.error)+((draft.quality||[]).length?' — '+draft.quality.map(x=>t(x)).join(' · '):''));if(!draft.rooms?.length)throw Error(t('no_rooms_found'));const unmatched=await wallAlignment(f.bg,draft.rooms);if(unmatched.length)throw Error(t('wallsUnmatched')+' '+unmatched.slice(0,3).join(', '));
+  const draft=await response.json();if(state!==targetState||f.bg!==targetImage||VentPlanReliability.fingerprint(state,f.id)!==targetFingerprint)return;if(draft.error==='recognition_not_configured')throw Error({lt:'AI atpažinimas šiuo metu neaktyvus. Naudok „Atpažinti sienų sritis“ arba apibrėžk pagal sienas.',en:'AI recognition is unavailable. Use Detect wall regions or Trace walls.',no:'Automatisk gjenkjenning er utilgjengelig. Bruk Trace walls.'}[state.lang]);if(!response.ok)throw Error((t(draft.error)||draft.error)+((draft.quality||[]).length?' — '+draft.quality.map(x=>t(x)).join(' · '):''));if(!draft.rooms?.length)throw Error(t('no_rooms_found'));const unmatched=await wallAlignment(f.bg,draft.rooms);if(unmatched.length)throw Error(t('wallsUnmatched')+' '+unmatched.slice(0,3).join(', '));
   if(state!==targetState||f.bg!==targetImage||VentPlanReliability.fingerprint(state,f.id)!==targetFingerprint)return;
   for(const r of draft.rooms)if(VentPlanGeometry.polygonIssues(r.polygon).length)throw Error(t('wallsUnmatched'));
   for(let i=0;i<draft.rooms.length;i++)for(let j=i+1;j<draft.rooms.length;j++)if(VentPlanGeometry.overlapArea(draft.rooms[i].polygon,draft.rooms[j].polygon)>2)throw Error(t('wallsUnmatched'));
@@ -630,9 +631,9 @@ async function recognize(){
   draft.rooms.forEach((r,i)=>{const polygon=Array.isArray(r.polygon)?r.polygon:[],printed=Number(r.areaM2);state.rooms.push({id:'auto'+idBase+'_'+i,floorId:f.id,name:r.name,type:r.type,
    area:r.areaM2!=null&&Number.isFinite(printed)?printed:f.calibrated?Number((polygonArea(polygon)*f.scale*f.scale).toFixed(2)):0,
    areaSource:r.areaM2!=null?'drawing':f.calibrated?'calibrated':'unknown',polygon,h:2.7,x:r.x,y:r.y,w:r.w,hpx:r.h,airflow:RULESET.airflowDefaults[r.type]||0})});
-  state.unit=draft.unit?{floorId:f.id,x:draft.unit.x,y:draft.unit.y}:{floorId:f.id,x:-100,y:-100};
+  if(state.unit.floorId===f.id||state.unit.x<0)state.unit=draft.unit?{floorId:f.id,x:draft.unit.x,y:draft.unit.y}:{floorId:f.id,x:-100,y:-100};
   f.envelope=draft.envelope||null;state.recognition={floorId:f.id,reviewed:false,roomCount:draft.rooms.length,expectedRoomCount:draft.expectedRoomCount,quality:draft.quality||[],uncertainties:[...(!draft.unit?[t('unitMissing')]:[]),...(draft.uncertainties||[])]};
-  selected=state.rooms[0]?.id||null;panel='bom';saveSilent();render();toast(t('drawReady'));
+  selected=state.rooms.find(r=>r.floorId===f.id)?.id||null;panel='bom';saveSilent();render();toast(t('drawReady'));
  }catch(e){console.error(e);if(state!==targetState||f.bg!==targetImage)return;state.recognition={floorId:f.id,reviewed:false,error:e.message||t('recognition_unavailable')};saveSilent();render();toast(e.message||t('recognition_unavailable'))}finally{clearTimeout(timeout);recognitionRunning=false;if(button){button.disabled=false;button.querySelector('[data-i18n="drawPlan"]').textContent=t('drawPlan')}}
 }
 function confirmRecognition(){if(!state.recognition||state.recognition.floorId!==state.selectedFloorId)return;pushHistory();state.recognition.reviewed=true;saveSilent();render()}

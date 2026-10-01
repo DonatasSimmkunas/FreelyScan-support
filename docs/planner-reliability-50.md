@@ -2,7 +2,7 @@
 
 Versija: 2026.10-reliability-1. 2026-10-01.
 
-Įgyvendinti 50 techninių pakeitimų. 88 skirtingi automatizuoti testai praėjo. Tai nereiškia, kad automatinis visų patalpų atpažinimas patvirtintas: tikras vieno būsto pavyzdys vis dar aptinka tik vonios sritį iš 3 pagrindinių vidaus sričių. AI kelias paruoštas, bet paslauga neturi API rakto. Vietinis algoritmas yra kandidatų siūlymo ir rankinio patikslinimo priemonė.
+Įgyvendinti 50 techninių pakeitimų. 89 skirtingi automatizuoti testai praėjo. Tai nereiškia, kad automatinis visų patalpų atpažinimas patvirtintas: tikras vieno būsto pavyzdys vis dar aptinka tik vonios sritį iš 3 pagrindinių vidaus sričių. AI kelias paruoštas, bet paslauga neturi API rakto. Vietinis algoritmas yra kandidatų siūlymo ir rankinio patikslinimo priemonė.
 
 | Nr. | Pakeitimas | Elgsena / ribos | Vieta | Patikra |
 |---:|---|---|---|---|

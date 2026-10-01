@@ -20,4 +20,5 @@ test('Empty project fails safely',()=>assert(A.prepareInputs([],{},'',defaults).
 test('Excessive balancing rejected',()=>{const d={...defaults,bedroom:1,bathroom:400};assert(A.prepareInputs(rooms(),{a:'bedroom',b:'bathroom'},'a',d).errors.some(e=>e.startsWith('flow_limit:')))});
 test('Continuation opens inputs',()=>assert(fs.readFileSync('plan-auto-ui.js','utf8').includes("if(state.rooms.some(r=>r.floorId===f.id)){window.completeAutomaticInputs();return}")));
 test('Old unknown-use review routes to actionable dialog',()=>assert(fs.readFileSync('plan-auto-ui.js','utf8').includes('const oldAccept=window.acceptFloorReview')));
+test('Rounding remainder balanced exactly',()=>{const rs=rooms();rs.push({...rs[1],id:'c'});const r=A.prepareInputs(rs,{a:'bedroom',b:'bathroom',c:'wc'},'b',defaults);assert(Math.abs(r.supply-r.extract)<1e-8)});
 console.log(n+' input completion checks passed');

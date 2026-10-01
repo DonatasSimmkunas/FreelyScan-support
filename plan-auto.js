@@ -31,6 +31,7 @@ function prepareInputs(rooms,choices,unitId,defaults){
  if(errors.length)return {errors};
  const lower=supply<extract?'supply':'extract',factor=Math.max(supply,extract)/Math.min(supply,extract);
  for(const r of next){const d=direction(r.type),key=d==='mixed'?lower+'Airflow':'airflow';if(d===lower||d==='mixed')r[key]=Number((r[key]*factor).toFixed(2));if(r.airflow>300||r.supplyAirflow>300||r.extractAirflow>300)errors.push('flow_limit:'+r.id)}
+ const adjustable=next.filter(r=>direction(r.type)===lower||direction(r.type)==='mixed').at(-1),key=direction(adjustable.type)==='mixed'?lower+'Airflow':'airflow';adjustable[key]=Number((adjustable[key]+Math.max(supply,extract)-sum(lower)).toFixed(2));
  const unitRoom=next.find(r=>r.id===unitId),point=G.interiorPoint(unitRoom,{x:unitRoom.x+unitRoom.w/2,y:unitRoom.y+unitRoom.hpx/2},20);
  if(!point||!G.contains(point,G.outline(unitRoom)))errors.push('unit_room_invalid');
  return {errors,rooms:next,unit:point?{...point,floorId:unitRoom.floorId,roomId:unitId,source:'user-room-selection'}:null,supply:sum('supply'),extract:sum('extract')};

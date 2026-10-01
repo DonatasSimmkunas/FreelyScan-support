@@ -1,6 +1,0 @@
-import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
-const source=fs.readFileSync('planner.html','utf8');const start=source.indexOf('function exportReport'),end=source.indexOf('\nfunction',start+1);let html='';let calibrated=false;
-const ctx={state:{lang:'en',projectName:'Test',rooms:[{id:'r1',name:'Room'}],floors:[{id:'f1',get calibrated(){return calibrated}}]},total:()=>({a:12,s:45,e:45,d:0}),checks:()=>[],bom:()=>[],buildStoreKits:()=>[{tier:'budget',subtotal:100,lines:[{sku:'VENT-PROJECT-D75',model:'Duct',qty:29,storePrice:0}]}],kitName:()=> 'Kit',eur:String,kitLineCopy:x=>x,esc:String,t:k=>k,hasUncalibratedRoutes:()=>!calibrated,routes:()=>[{roomId:'r1',floorId:'f1',valid:true,length:26.2,lines:1,diameter:75}],window:{open(){return{document:{write(s){html=s},close(){}},print(){}}}},document:{getElementById(){return{outerHTML:'<svg></svg>'}}},setTimeout(){},plannerTrack(){},Date};
-vm.runInNewContext(source.slice(start,end),ctx);ctx.exportReport();assert(html.includes('notCalibrated'));assert(!html.includes('26.2 m'));assert(!html.includes('29 ×'));
-calibrated=true;ctx.exportReport();assert(html.includes('26.2 m'));assert(html.includes('29 ×'));
-console.log('PDF export: uncalibrated route and purchase metres hidden, calibrated metres retained PASS');

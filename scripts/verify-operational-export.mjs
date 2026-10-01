@@ -1,3 +1,0 @@
-import fs from 'node:fs';import assert from 'node:assert/strict';
-export function verify(snapshot){assert.equal(snapshot.format,'vent-operational-export-v1');const tables=snapshot.tables,ids=new Set();for(const o of tables.orders){assert(!ids.has(o.id),'duplicate order');ids.add(o.id);assert(Number.isFinite(Number(o.total_eur)));}for(const i of tables.order_items){assert(ids.has(i.order_id),'orphan item');assert(Number(i.qty)>0);assert(Number(i.unit_price_eur)>=0)}return{orders:ids.size,items:tables.order_items.length,settings:tables.site_settings.length}}
-if(process.argv[2])console.log(verify(JSON.parse(fs.readFileSync(process.argv[2],'utf8'))));

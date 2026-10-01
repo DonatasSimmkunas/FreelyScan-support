@@ -1,6 +1,6 @@
 # FreelyScan privacy policy
 
-**Effective September 24, 2026.** This policy applies to the FreelyScan iPhone app published by its App Store seller.
+**Effective October 1, 2026.** This policy applies to the FreelyScan iPhone app published by its App Store seller.
 
 ## Documents and on-device processing
 
@@ -20,8 +20,8 @@ The 1.0 app bundle includes Google Mobile Ads and Google's User Messaging Platfo
 
 ## Support requests
 
-If you [open a support issue](https://github.com/DonatasSimmkunas/FreelyScan-support/issues/new), GitHub processes the information you choose to submit under its own privacy statement. Issues are public. Do not attach personal documents, signatures, passwords or payment information. We use the details you provide to answer or resolve your request. You can edit or delete your own issue through GitHub subject to its policies.
+If you email support at [donatas@edvconsult.no](mailto:donatas@edvconsult.no), we receive your email address and the information you choose to send, and use it to respond to your request. Please avoid sending private scans or payment details unless specifically necessary. If you [open a support issue](https://github.com/DonatasSimmkunas/FreelyScan-support/issues/new), GitHub processes the information you choose to submit under its own privacy statement. Issues are public. Do not attach personal documents, signatures, passwords or payment information. We use the details you provide to answer or resolve your request. You can edit or delete your own issue through GitHub subject to its policies.
 
 ## Changes and contact
 
-We may revise this policy when the app or its services change, and will update the effective date. For questions about this policy or FreelyScan, [contact the publisher through the support page](README.md). Do not send personal documents through a public issue.
+We may revise this policy when the app or its services change, and will update the effective date. For questions about this policy or FreelyScan, email [donatas@edvconsult.no](mailto:donatas@edvconsult.no) or see the [support page](README.md). Do not send personal documents through a public issue.

@@ -14,7 +14,7 @@
   const step=2,w=width/step,h=height/step,gray=new Uint8Array(w*h),hist=new Uint32Array(256);let sum=0;
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const k=((y*step)*width+x*step)*4,a=pixels[k+3]/255,l=Math.round((.2126*pixels[k]+.7152*pixels[k+1]+.0722*pixels[k+2])*a+255*(1-a));gray[y*w+x]=l;hist[l]++;sum+=l}
   let sumBack=0,countBack=0,best=0,threshold=110;for(let t=0;t<255;t++){countBack+=hist[t];sumBack+=t*hist[t];if(!countBack||countBack===gray.length)continue;const countFore=gray.length-countBack,d=sumBack/countBack-(sum-sumBack)/countFore,v=countBack*countFore*d*d;if(v>best){best=v;threshold=t}}
-  threshold=thinWalls?170:Math.max(65,Math.min(140,threshold));const base=Uint8Array.from(gray,g=>g<=threshold?1:0),dark=base.reduce((n,x)=>n+x,0)/base.length;
+  threshold=thinWalls?Math.max(170,Math.min(220,threshold+45)):Math.max(65,Math.min(140,threshold));const base=Uint8Array.from(gray,g=>g<=threshold?1:0),dark=base.reduce((n,x)=>n+x,0)/base.length;
   if(dark<.002||dark>.4)return {rooms:[],reason:'raster_contrast',threshold,density:dark};
   // Discard tiny disconnected marks; long walls and attached labels remain evidence.
   // Main walls have stroke thickness; isolated text / furniture hairlines do not.

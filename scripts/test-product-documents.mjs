@@ -11,6 +11,7 @@ const ctx={Deno:{serve(fn){handler=fn}},URL,Request,Response,TextDecoder,Uint8Ar
 vm.runInNewContext(stripTypeScriptTypes(readFileSync('supabase/functions/product-document/index.ts','utf8')),ctx);
 const call=(q='sku=AHU000108&doc=0',key='sb_publishable_HtD7m9xbEc00YJbytJRrRA_UhtG-DJe',origin='https://vent.it.com')=>handler(new Request('https://example.test?'+q,{headers:{apikey:key,origin}}));
 assert.equal((await call()).status,200);
+assert.equal((await handler(new Request('https://example.test?sku=AHU000108&doc=0&key=sb_publishable_HtD7m9xbEc00YJbytJRrRA_UhtG-DJe'))).status,200);
 assert.equal((await call(undefined,'wrong')).status,401);
 assert.equal((await call(undefined,undefined,'https://hostile.test')).status,403);
 assert.equal((await call('sku=../../secret&doc=0')).status,400);

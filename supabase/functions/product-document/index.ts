@@ -11,7 +11,7 @@ Deno.serve(async(req:Request)=>{
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='GET')return fail('method_not_allowed',405);
  // Public catalog documents only; the app key selects the authorized catalog client.
- if(req.headers.get('apikey')!==PUBLIC_KEY)return fail('unauthorized',401);
+ if((req.headers.get('apikey')||new URL(req.url).searchParams.get('key'))!==PUBLIC_KEY)return fail('unauthorized',401);
  if(origin&&!ORIGINS.has(origin))return fail('forbidden_origin',403);
  const q=new URL(req.url).searchParams,sku=q.get('sku')||'',raw=q.get('doc')||'';
  if(!/^[A-Z0-9_-]{1,60}$/.test(sku)||!/^\d{1,4}$/.test(raw))return fail('invalid_document',400);

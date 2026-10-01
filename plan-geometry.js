@@ -30,5 +30,11 @@
    return {...room,polygon:poly,x,y,w,h};
   });
  }
- root.VentPlanGeometry={inside,roomPoint,snapRooms};
+ function validPolygon(poly){
+  if(!Array.isArray(poly)||poly.length<3||poly.length>40||poly.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))return false;
+  const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+  for(let i=0;i<poly.length;i++)for(let j=i+1;j<poly.length;j++){if(j===i+1||(i===0&&j===poly.length-1))continue;const a=poly[i],b=poly[(i+1)%poly.length],c=poly[j],d=poly[(j+1)%poly.length];if(cross(a,b,c)*cross(a,b,d)<0&&cross(c,d,a)*cross(c,d,b)<0)return false}
+  const area=Math.abs(poly.reduce((sum,p,i)=>{const q=poly[(i+1)%poly.length];return sum+p.x*q.y-q.x*p.y},0)/2);return area>=500;
+ }
+ root.VentPlanGeometry={inside,roomPoint,snapRooms,validPolygon};
 })(typeof window==='undefined'?globalThis:window);

@@ -1,0 +1,9 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+const origins=new Set(['https://vent.it.com','https://www.vent.it.com','https://vent-it-com.onrender.com']);
+Deno.serve(async req=>{
+ const origin=req.headers.get('origin')||'',headers={'content-type':'application/json','cache-control':'no-store','access-control-allow-origin':origins.has(origin)?origin:'https://vent.it.com','access-control-allow-headers':'authorization','access-control-allow-methods':'GET,OPTIONS','vary':'Origin'};
+ const reply=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers});if(req.method==='OPTIONS')return new Response('ok',{headers});if(req.method!=='GET'||(origin&&!origins.has(origin)))return reply({error:'forbidden'},403);
+ const sb=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);const {data:u}=await sb.auth.getUser((req.headers.get('authorization')||'').replace(/^Bearer /i,''));if(!u.user)return reply({error:'unauthorized'},401);const {data:admin}=await sb.from('site_admins').select('role').eq('user_id',u.user.id).maybeSingle();if(!admin)return reply({error:'forbidden'},403);
+ try{const tables:any={};for(const table of ['orders','order_items','product_overrides','site_settings']){let rows:any[]=[];for(let offset=0;;offset+=500){const {data,error}=await sb.from(table).select('*').order(table==='site_settings'?'key':table==='product_overrides'?'sku':'id').range(offset,offset+499);if(error)throw error;rows.push(...data);if(data.length<500)break}tables[table]=rows}return reply({format:'vent-operational-export-v1',created_at:new Date().toISOString(),scope:'Orders, items, product overrides and public settings. Not a full database or file backup.',tables});}catch{return reply({error:'export_failed'},500)}
+});

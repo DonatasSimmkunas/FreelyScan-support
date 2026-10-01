@@ -1,0 +1,3 @@
+import {verify} from './verify-operational-export.mjs';import assert from 'node:assert/strict';
+const snapshot={format:'vent-operational-export-v1',tables:{orders:[{id:'1',total_eur:20}],order_items:[{order_id:'1',qty:2,unit_price_eur:10}],site_settings:[]}};
+assert.deepEqual(verify(JSON.parse(JSON.stringify(snapshot))),{orders:1,items:1,settings:0});assert.throws(()=>verify({...snapshot,tables:{...snapshot.tables,order_items:[{order_id:'other',qty:1,unit_price_eur:1}]}}));console.log('Operational export round trip PASS; orphan records rejected. Full disaster restore remains a separate infrastructure test.');

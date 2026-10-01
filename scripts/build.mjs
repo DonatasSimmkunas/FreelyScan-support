@@ -1,27 +1,9 @@
 import { mkdir, rm, copyFile, cp, readdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
-
-const root = process.cwd();
-const dist = resolve(root, 'dist');
-await rm(dist, { recursive: true, force: true });
-await mkdir(dist, { recursive: true });
-
-// Editable source files are the deploy source. The old compressed bundle was incomplete.
-const publicFiles = (await readdir(root)).filter(name =>
-  /\.(?:html|xml|txt|js|json)$/.test(name) && name !== 'package.json'
-);
-for (const name of publicFiles) await copyFile(join(root, name), join(dist, name));
-await mkdir(join(dist, 'assets'), { recursive: true });
-for (const name of await readdir(join(root, 'assets'))) {
-  await cp(join(root, 'assets', name), join(dist, 'assets', name), {recursive:true});
-}
-
-if (process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY) {
-  const config = {
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY,
-    authRedirectUrl: process.env.SUPABASE_AUTH_REDIRECT_URL || 'https://vent.it.com'
-  };
-  await writeFile(join(dist, 'config.js'), `window.__VENT_CONFIG__ = ${JSON.stringify(config)};\n`);
-}
-console.log('VENT build complete -> dist/');
+const root=process.cwd(),dist=resolve(root,'dist');
+await rm(dist,{recursive:true,force:true});await mkdir(dist,{recursive:true});
+const publicFiles=['index.html','planner.html','product.html','admin.html','quote.html','order-success.html','terms.html','privacy.html','returns.html','warranty.html','shipping.html','cookies.html','brand-image.js','product-enrichment.js','plan-geometry.js','delivery-estimate.js','admin-operations.js','robots.txt','sitemap.xml'];
+for(const name of publicFiles)await copyFile(join(root,name),join(dist,name));
+await cp(join(root,'assets'),join(dist,'assets'),{recursive:true});
+await writeFile(join(dist,'health.json'),JSON.stringify({version:'launch-v2',mode:'quotation',built_at:new Date().toISOString()}));
+console.log('Public website built; server code, tests, cost data and setup documents excluded.');

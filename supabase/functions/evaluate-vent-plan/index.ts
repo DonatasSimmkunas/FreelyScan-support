@@ -1,7 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-import { quota } from "../_shared/limits.ts";
 const origins = new Set(["https://vent.it.com", "https://www.vent.it.com", "https://vent-it-com.onrender.com"]);
 const types = ["living", "livingKitchen", "bedroom", "office", "kitchen", "bathroom", "wc", "utility", "hall", "vestibule", "technical", "other"];
 const reply = (body: unknown, status: number, headers: HeadersInit) =>
@@ -21,16 +20,16 @@ Deno.serve(async request => {
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) return reply({ error: "recognition_not_configured" }, 503, headers);
 
-  const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!bearer) return reply({ error: "sign_in_required" }, 401, headers);
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data: { user }, error: authError } = await sb.auth.getUser(bearer);
-  if (authError || !user) return reply({ error: "sign_in_required" }, 401, headers);
-
+  const raw=await request.text();if(raw.length>4_000_000)return reply({error:'image_too_large'},413,headers);
+  const parsed=JSON.parse(raw),token=request.headers.get('x-evaluation-token')||'';
+  const sha=async(s:string)=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,'0')).join('');
+  const {data:allowed,error:evalError}=await sb.rpc('vent_use_evaluation',{p_token_hash:await sha(token),p_image_hash:await sha(parsed.image||'')});
+  if(evalError||!allowed)return reply({error:'forbidden'},403,headers);
   try {
-    if(!await quota(sb,'vision-user',user.id,10,86400)||!await quota(sb,'vision-global','all',150,86400))return reply({error:'recognition_daily_limit'},429,{...headers,'retry-after':'86400'});
+
     if (Number(request.headers.get("content-length")) > 4_000_000) return reply({ error: "image_too_large" }, 413, headers);
-    const { image, documentText } = await request.json();
+    const { image, documentText } = parsed;
     if (typeof image !== "string" || image.length > 3_000_000 || !/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(image))
       return reply({ error: "invalid_image" }, 400, headers);
 

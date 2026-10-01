@@ -16,6 +16,7 @@ Deno.serve(async(req)=>{
    const row:any={sku,updated_at:new Date().toISOString()};for(const k of ["title_override","description_override","lead_time_text","stock_status","image_override_url"])if(k in b)row[k]=txt(b[k],k==="description_override"?1000:500);if("store_price_override" in b)row.store_price_override=b.store_price_override===""||b.store_price_override==null?null:Number(b.store_price_override);if("is_hidden" in b)row.is_hidden=!!b.is_hidden;
    const {error}=await sb.from("product_overrides").upsert(row,{onConflict:"sku"});if(error)throw error;
   }else if(b.action==="order_status"){
+   return new Response(JSON.stringify({error:"use_order_operations"}),{status:409,headers:H});
    const allowed=["request_received","payment_pending","paid","processing","shipped","cancelled","refunded"];if(!allowed.includes(b.status))throw new Error("status");const {error}=await sb.from("orders").update({status:b.status,updated_at:new Date().toISOString()}).eq("id",b.order_id);if(error)throw error;
   }else if(b.action==="image_review"){
    const allowed=["open","approved","rejected","fixed"];if(!allowed.includes(b.status))throw new Error("status");const {error}=await sb.from("image_review_queue").update({status:b.status,issue_detail:txt(b.issue_detail,1000),updated_at:new Date().toISOString()}).eq("sku",b.sku);if(error)throw error;

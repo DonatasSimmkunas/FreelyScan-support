@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {stripTypeScriptTypes} from 'node:module';
+import vm from 'node:vm';
+let handler,source='https://www.sorke.cz/example.pdf',redirect=null,body='%PDF-1.7 document',length=null;
+const ctx={Deno:{serve(fn){handler=fn}},URL,Request,Response,TextDecoder,Uint8Array,AbortSignal,fetch:async(u)=>{
+ if(String(u).includes('/assets/product-details/'))return Response.json({sku:'AHU000108',documents:[{name:'Example',type:'pdf',url:source}]});
+ if(redirect)return new Response(null,{status:302,headers:{location:redirect}});
+ return new Response(body,{headers:length?{'content-length':String(length)}:{}});
+}};
+vm.runInNewContext(stripTypeScriptTypes(readFileSync('supabase/functions/product-document/index.ts','utf8')),ctx);
+const call=(q='sku=AHU000108&doc=0',key='sb_publishable_HtD7m9xbEc00YJbytJRrRA_UhtG-DJe',origin='https://vent.it.com')=>handler(new Request('https://example.test?'+q,{headers:{apikey:key,origin}}));
+assert.equal((await call()).status,200);
+assert.equal((await call(undefined,'wrong')).status,401);
+assert.equal((await call(undefined,undefined,'https://hostile.test')).status,403);
+assert.equal((await call('sku=../../secret&doc=0')).status,400);
+assert.equal((await call('sku=AHU000108&doc=1')).status,404);
+source='http://127.0.0.1/private';assert.equal((await call()).status,502);
+source='https://www.sorke.cz/example.pdf';redirect='https://127.0.0.1/private';assert.equal((await call()).status,502);redirect=null;
+body='<html>supplier error</html>';assert.equal((await call()).status,502);
+body='%PDF-1.7';length=51*1024*1024;assert.equal((await call()).status,413);
+console.log('Product documents PASS: exact catalog index, public app key, origin, path validation, redirect allowlist, content checks and size limit.');

@@ -1,4 +1,4 @@
-import { mkdir, rm, copyFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, rm, copyFile, cp, readdir, writeFile } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 
 const root = process.cwd();
@@ -13,7 +13,7 @@ const publicFiles = (await readdir(root)).filter(name =>
 for (const name of publicFiles) await copyFile(join(root, name), join(dist, name));
 await mkdir(join(dist, 'assets'), { recursive: true });
 for (const name of await readdir(join(root, 'assets'))) {
-  await copyFile(join(root, 'assets', name), join(dist, 'assets', name));
+  await cp(join(root, 'assets', name), join(dist, 'assets', name), {recursive:true});
 }
 
 if (process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY) {

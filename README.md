@@ -4,7 +4,7 @@ FreelyScan scans paper documents into PDFs on an iPhone. This repository contain
 
 ## Contact support
 
-[Open a FreelyScan support request](https://github.com/DonatasSimmkunas/FreelyScan-support/issues/new). A free GitHub account is required. Describe the app version, iPhone model, and what happened. **Issues are public:** do not attach scans, signatures, billing details, passwords, or other sensitive information. If you cannot use GitHub, use the support contact shown on the app's App Store product page once public distribution begins.
+Email [donatas@edvconsult.no](mailto:donatas@edvconsult.no) for private support. Include the app version, iPhone model, and what happened, but avoid sending scans, signatures, passwords, or payment details unless specifically needed to resolve your request. You can also [open a public FreelyScan support request](https://github.com/DonatasSimmkunas/FreelyScan-support/issues/new) with a free GitHub account. **Issues are public:** never attach personal documents or billing details there.
 
 FreelyScan cannot read the PDFs stored in your app. If you are reporting a scanning problem, use a sample page without personal details.
 

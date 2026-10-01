@@ -1,3 +1,9 @@
+# Selected payments provider: Paysera
+
+Owner selected Paysera on 2026-10-01. See [PAYSERA-SETUP.md](PAYSERA-SETUP.md) for merchant details, required credentials, callback addresses and the test / activation sequence. Card payments remain disabled until the Paysera project is approved and tested.
+
+The Stripe instructions below are retained only for the unused alternative integration.
+
 # VENT IT launch configuration — 1 October 2026
 
 Seller configured from https://rekvizitai.vz.lt/imone/gedventa/:

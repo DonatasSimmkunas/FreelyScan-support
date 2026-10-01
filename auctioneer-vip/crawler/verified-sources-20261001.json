@@ -1,0 +1,62 @@
+{
+  "verifiedAt": "2026-10-01",
+  "sources": [
+    {
+      "id": "careers_epsog",
+      "provider": "EPSO-G",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/EPSOG/",
+      "api": "https://api.smartrecruiters.com/v1/companies/EPSOG/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/EPSOG/"
+    },
+    {
+      "id": "careers_interikeagroup",
+      "provider": "Inter IKEA Group",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/InterIKEAGroup/",
+      "api": "https://api.smartrecruiters.com/v1/companies/InterIKEAGroup/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/InterIKEAGroup/"
+    },
+    {
+      "id": "careers_wix2",
+      "provider": "Wix",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/Wix2/",
+      "api": "https://api.smartrecruiters.com/v1/companies/Wix2/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/Wix2/"
+    },
+    {
+      "id": "careers_bazaarvoice",
+      "provider": "Bazaarvoice",
+      "type": "lever",
+      "official": "https://jobs.lever.co/bazaarvoice/",
+      "api": "https://api.lever.co/v0/postings/bazaarvoice?mode=json&limit=250",
+      "jobHost": "jobs.lever.co",
+      "path": "/bazaarvoice/",
+      "paged": true
+    },
+    {
+      "id": "careers_civitta",
+      "provider": "Civitta",
+      "type": "lever",
+      "official": "https://jobs.lever.co/Civitta/",
+      "api": "https://api.lever.co/v0/postings/Civitta?mode=json&limit=250",
+      "jobHost": "jobs.lever.co",
+      "path": "/Civitta/",
+      "paged": true
+    },
+    {
+      "id": "careers_sgs",
+      "provider": "SGS",
+      "type": "smartrecruiters",
+      "official": "https://jobs.smartrecruiters.com/SGS/",
+      "api": "https://api.smartrecruiters.com/v1/companies/SGS/postings?country=lt&limit=100",
+      "jobHost": "jobs.smartrecruiters.com",
+      "path": "/SGS/"
+    }
+  ],
+  "evidence": "Public ATS JSON responses verified; only explicit Lithuanian locations accepted; empty and blocked sources excluded."
+}

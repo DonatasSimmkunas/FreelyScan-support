@@ -32,6 +32,12 @@ export const CAREER_BOARD_SOURCES = Object.freeze([
   Object.freeze({"id":"careers_hmgroup","provider":"H&M Group","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/HMGroup/","api":"https://api.smartrecruiters.com/v1/companies/HMGroup/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/HMGroup/"}),
   Object.freeze({"id":"careers_devoteam","provider":"Devoteam","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Devoteam/","api":"https://api.smartrecruiters.com/v1/companies/Devoteam/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Devoteam/"}),
   Object.freeze({"id":"careers_nielseniq","provider":"NielsenIQ","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/NielsenIQ/","api":"https://api.smartrecruiters.com/v1/companies/NielsenIQ/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/NielsenIQ/"}),
+  Object.freeze({"id":"careers_epsog","provider":"EPSO-G","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/EPSOG/","api":"https://api.smartrecruiters.com/v1/companies/EPSOG/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/EPSOG/"}),
+  Object.freeze({"id":"careers_interikeagroup","provider":"Inter IKEA Group","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/InterIKEAGroup/","api":"https://api.smartrecruiters.com/v1/companies/InterIKEAGroup/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/InterIKEAGroup/"}),
+  Object.freeze({"id":"careers_wix2","provider":"Wix","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/Wix2/","api":"https://api.smartrecruiters.com/v1/companies/Wix2/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/Wix2/"}),
+  Object.freeze({"id":"careers_bazaarvoice","provider":"Bazaarvoice","type":"lever","official":"https://jobs.lever.co/bazaarvoice/","api":"https://api.lever.co/v0/postings/bazaarvoice?mode=json&limit=250","jobHost":"jobs.lever.co","path":"/bazaarvoice/","paged":true}),
+  Object.freeze({"id":"careers_civitta","provider":"Civitta","type":"lever","official":"https://jobs.lever.co/Civitta/","api":"https://api.lever.co/v0/postings/Civitta?mode=json&limit=250","jobHost":"jobs.lever.co","path":"/Civitta/","paged":true}),
+  Object.freeze({"id":"careers_sgs","provider":"SGS","type":"smartrecruiters","official":"https://jobs.smartrecruiters.com/SGS/","api":"https://api.smartrecruiters.com/v1/companies/SGS/postings?country=lt&limit=100","jobHost":"jobs.smartrecruiters.com","path":"/SGS/"}),
 ]);
 export const SOURCE_DEFINITIONS = Object.freeze([
   Object.freeze({id: 'company_careers', name: 'Oxylabs ir Hostinger karjeros puslapiai', url: 'https://career.oxylabs.io/', documentationUrl: 'https://github.com/lever/postings-api', expectedUpdateDays: 1}),
@@ -314,7 +320,7 @@ async function readCareerBoard(board,{sourceId,offset,size,fetchImpl,signal,now,
     const expires=dateOnly(row.application_deadline)?row.application_deadline+'T23:59:59.999Z':timestamp(row.application_deadline);
     if(expires&&Date.parse(expires)<now.getTime())continue;
     if (!id || !title || location === null || !url || row.isListed === false || seen.has(id)) continue;
-    if(board.id&&/talent pool|future (?:opportunit|position|role)|general application|spontaneous application|open application|join.{0,20}talent|^apply here: future\b|didn.t find your role/iu.test(title))continue;
+    if(board.id&&/talent pool|future (?:opportunit|position|role)|general application|spontaneous application|open application|join.{0,20}talent|^apply here: future\b|didn.t find your role|neradai.{0,50}(?:pozicijos|darbo)|atsi[uų]sk.{0,30}cv.{0,60}duomen[uų] baz|talent[uų] (?:bankas|baz[ėe])/iu.test(title))continue;
     seen.add(id);
     matching.push({source_id: sourceId, source_job_id: `${board.provider.toLowerCase()}:${id}`, company_code: null, provider: board.provider, title, city_area: location, url, status: 'open', published_at: timestamp(board.type === 'lever' ? row.createdAt : board.type==='greenhouse'?row.first_published:board.type==='smartrecruiters'?row.releasedDate:row.publishedAt), source_updated_at: timestamp(row.updated_at)||response.sourceUpdatedAt, expires_at: expires});
   }

@@ -229,3 +229,11 @@ test('paged Lever continues beyond the first page and refuses cross-board cursor
  const second=await fetchCareerBoardBatch({...options,cursor:first.nextCursor});assert.equal(second.jobs.length,1);assert.ok(second.nextCursor);
  const last=await fetchCareerBoardBatch({...options,cursor:second.nextCursor});assert.equal(last.nextCursor,null);
 });
+
+test('Lithuanian CV database invitations are not vacancies, while real CV-related job titles remain',async()=>{
+ const titles=['Neradai dominančios atviros pozicijos, atsiųsk CV į EPSO-G duomenų bazę!','Atsiųsk CV į mūsų duomenų bazę','Talentų bankas','Informacijos saugos vadovė (-as)','CV duomenų analizės specialistas'];
+ const batch=await fetchCareerBoardBatch({boardId:'careers_epsog',now:NOW,fetchImpl:async()=>response({totalFound:titles.length,content:titles.map((name,i)=>({id:String(i+1),name,location:{country:'lt',city:'Vilnius'}}))})});
+ assert.deepEqual(batch.jobs.map(j=>j.title),titles.slice(3));
+ assert.equal(batch.companies[0].provider,'EPSO-G');
+ assert.equal(new Set(batch.jobs.map(j=>j.source_job_id)).size,2);
+});

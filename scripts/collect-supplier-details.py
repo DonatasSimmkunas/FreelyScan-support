@@ -27,7 +27,7 @@ def collect(path):
  rows=[]
  for x in li:
   key,sep,value=x.partition(':')
-  if sep and key in labels and value.strip():rows.append([labels[key],value.strip(),''])
+  if sep and key in labels and value.strip():rows.append([labels[key],value.strip().replace(' při ',' at ').replace(' proud ',' current ').replace('Proměnnými otáčkami','Variable speed').replace('Ocel RAL9016 a EPP','Steel RAL9016 and EPP'),''])
  if len(rows)<5:return None
  p=catalog[sku];docs=[{'name':u.split('/')[-1].replace('.pdf','').replace('_',' '),'type':'pdf','url':urllib.parse.urljoin(BASE,u)} for u in dict.fromkeys(re.findall(r'href="([^"]+\.pdf)"',s))]
  d={'sku':sku,'model':p['model'],'source':BASE+path,'sourceScope':'exact-supplier-sku','checkedAt':'2026-10-01','discontinued':False,'sections':[{'name':'Supplier technical data · SORKE','rows':rows}],'documents':docs,'features':[],'notes':[]}

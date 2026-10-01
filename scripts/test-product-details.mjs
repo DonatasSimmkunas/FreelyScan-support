@@ -20,9 +20,9 @@ let rows=0,documents=0;
 for(const sku of coverage.skus){
   const p=JSON.parse(fs.readFileSync(`assets/product-details/${sku}.json`));
   assert.equal(p.sku,sku);
-  assert(p.source.startsWith('https://select.salda.lt/Product/Index/')||p.sourceScope==='archived-model-manual');
+  assert(p.source.startsWith('https://select.salda.lt/Product/Index/')||p.sourceScope==='archived-model-manual'||(p.sourceScope==='exact-supplier-sku'&&p.source.startsWith('https://www.sorke.cz/')));
   for(const section of p.sections)for(const row of section.rows){assert(row.length===3&&row[0]&&row[1]);assert(!row[1].includes('parameter.'));rows++;}
-  for(const doc of p.documents){assert(/^https:\/\/(select|www)\.salda\.lt\//.test(doc.url));documents++;}
+  for(const doc of p.documents){assert(/^https:\/\/(?:(?:select|www)\.salda\.lt|www\.sorke\.cz)\//.test(doc.url));documents++;}
 }
 const standard=JSON.parse(fs.readFileSync('assets/product-details/AHU000658.json'));
 const plus=JSON.parse(fs.readFileSync('assets/product-details/AHU001104.json'));

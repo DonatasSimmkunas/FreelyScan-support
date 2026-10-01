@@ -1,0 +1,11 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {stripTypeScriptTypes} from 'node:module';import {webcrypto} from 'node:crypto';
+let handler,inserted,lines;
+const catalog=[{sku:'TEST-SKU',model:'Verified item',storePrice:100,weightKg:2,dimensionsMm:{m3:.01}}];
+function from(table){return{select(){return this},eq(){return this},maybeSingle:async()=>({data:{country_code:'LT',base_eur:5,kg_rate:1,m3_rate:0,oversize_eur:0}}),single:async()=>({data:{id:'test-order',order_no:'TEST-1',status:'request_received',subtotal_eur:inserted.subtotal_eur,shipping_eur:inserted.shipping_eur,total_eur:inserted.total_eur}}),insert(v){if(table==='orders')inserted=v;else lines=v;return this},then(resolve){resolve({data:[],error:null})}}}
+const ctx={Deno:{serve(fn){handler=fn},env:{get(key){return key==='RESEND_API_KEY'?undefined:'test'}}},createClient(){return{from,auth:{getUser:async()=>({data:{user:null}})}}},fetch:async()=>({json:async()=>catalog}),crypto:webcrypto,TextEncoder,Uint8Array,Request,Response,console};
+vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('supabase/functions/create-order/index.ts','utf8').replace(/^import .*;\n/gm,'')),ctx);
+const payload={email:'buyer@example.invalid',country_code:'LT',accept_terms:true,items:[{sku:'TEST-SKU',qty:2,storePrice:.01}]};
+const invoke=(body,origin='https://vent-it-com.onrender.com',method='POST')=>handler(new Request('https://example.test',{method,headers:{origin,'content-type':'application/json'},body:method==='POST'?JSON.stringify(body):undefined}));
+let r=await invoke(payload),d=await r.json();assert.equal(r.status,200);assert.equal(r.headers.get('access-control-allow-origin'),'https://vent-it-com.onrender.com');assert.equal(d.total_eur,209.5);assert.equal(lines[0].unit_price_eur,100);assert.equal(inserted.metadata.tax_status,'to_confirm_before_payment');assert(d.checkout_token);assert(!d.metadata?.checkout_token_hash);
+assert.equal((await invoke({...payload,accept_terms:false})).status,400);assert.equal((await invoke({...payload,items:[]})).status,400);assert.equal((await invoke(payload,'https://attacker.test')).status,403);assert.equal((await invoke(null,'https://vent-it-com.onrender.com','OPTIONS')).status,200);
+console.log('Orders: Render CORS, server prices, freight, terms, empty-cart rejection, checkout-token isolation PASS');

@@ -137,7 +137,7 @@ body.hasUploadedPlan .stats{padding-top:7px;padding-bottom:9px}
       </div>
     </header>
     <div class="plannerWelcome">
-<div class="plannerWelcomeCopy"><div style="font-size:9px;letter-spacing:.18em;color:#62e0ea;font-weight:850" data-i18n="visualPlanning">VENT IT · VISUAL PLANNING</div><h2 data-i18n="welcomeTitle">Plan ventilation in 5 clear steps</h2><p data-i18n="welcomeText">Start with your architectural plan. Calibrate scale, confirm rooms and airflow, place the HRV and terminals, then review suggested routes and the preliminary bill of materials.</p><div class="plannerQuick"><button class="primary" onclick="openUpload()" data-i18n="welcome1">1 · Upload plan</button><button class="drawPlanBtn" onclick="drawPlan()" data-i18n="drawPlan">Draw ventilation plan</button><button onclick="setTool('scale')" data-i18n="welcome2">2 · Calibrate</button><button onclick="addRoom()" data-i18n="welcome3">3 · Rooms</button><button onclick="setTool('unit')" data-i18n="welcome4">4 · HRV</button><button onclick="setPanel('bom')" data-i18n="welcome5">5 · Kits & BOM</button></div></div>
+<div class="plannerWelcomeCopy"><div style="font-size:9px;letter-spacing:.18em;color:#62e0ea;font-weight:850" data-i18n="visualPlanning">VENT IT · VISUAL PLANNING</div><h2 data-i18n="welcomeTitle">Plan ventilation in 5 clear steps</h2><p data-i18n="welcomeText">Start with your architectural plan. Calibrate scale, confirm rooms and airflow, place the HRV and terminals, then review suggested routes and the preliminary bill of materials.</p><div class="plannerQuick"><button class="primary" onclick="openUpload()" data-i18n="welcome1">1 · Upload plan</button><button class="drawPlanBtn" onclick="drawPlan()" data-i18n="drawPlan">Draw ventilation plan</button><button onclick="setTool('calibrate')" data-i18n="welcome2">2 · Calibrate</button><button onclick="addRoom()" data-i18n="welcome3">3 · Rooms</button><button onclick="setTool('unit')" data-i18n="welcome4">4 · HRV</button><button onclick="setPanel('bom')" data-i18n="welcome5">5 · Kits & BOM</button></div></div>
 <div class="plannerWelcomeImg"><img src="assets/planner-3d.webp" alt="VENT IT ventilation planning example"></div>
 </div>
 <div class="stats" id="stats"></div>
@@ -168,7 +168,7 @@ body.hasUploadedPlan .stats{padding-top:7px;padding-bottom:9px}
     <div class="row"><button onclick="closeAuth()" id="authCancel">Atšaukti</button><button class="primary" onclick="sendMagicLink()" id="authSend">Siųsti nuorodą</button></div>
     <div style="border-top:1px solid #dce7ec;margin-top:16px;padding-top:14px">
       <p id="authPasteInfo" style="margin:0 0 8px"></p>
-      <input class="authField" id="authLink" type="url" autocomplete="off" spellcheck="false" style="width:100%" aria-label="Email confirmation link">
+      <input class="authField" id="authLink" type="text" autocomplete="off" spellcheck="false" style="width:100%" aria-label="Email confirmation link">
       <div class="row"><button class="primary" onclick="confirmEmailLink()" id="authConfirmLink"></button></div>
     </div>
   </div>
@@ -178,6 +178,7 @@ body.hasUploadedPlan .stats{padding-top:7px;padding-bottom:9px}
   </div>
 </div></div>
 <div class="toast" id="toast"></div><div class="plannerCookieBar" id="plannerCookieBar"><p id="plannerCookieText">Essential storage keeps your project and language preferences. Optional anonymous analytics help us improve the Planner. <a href="cookies.html">Details</a>.</p><div class="acts"><button id="plannerCookieReject" class="ghost" onclick="plannerConsent('denied')">Essential only</button><button id="plannerCookieAccept" onclick="plannerConsent('granted')">Allow analytics</button></div></div>
+<script src="plan-geometry.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -306,7 +307,7 @@ function automaticTerminals(r){
    const airflow=Number(ov.airflow??amount/count),mixed=r.type==='livingKitchen';
    const xRatio=mixed?(kind==='supply'?0.18+0.38*(i+0.5)/count:0.62+0.32*(i+0.5)/count):0.15+0.7*(i+0.5)/count;
    const yRatio=(mixed?(kind==='supply'?0.68:0.27):0.56)+((i%2)-0.5)*(mixed?0.16:0.12);
-   out.push({...duct(airflow),id,roomId:r.id,floorId:r.floorId,role:kind,airflow,x:ov.x??(r.x+r.w*xRatio),y:ov.y??(r.y+r.hpx*yRatio),manual:!!ov.manual});
+   const position=VentPlanGeometry.roomPoint(r,{x:ov.x??(r.x+r.w*xRatio),y:ov.y??(r.y+r.hpx*yRatio)});out.push({...duct(airflow),id,roomId:r.id,floorId:r.floorId,role:kind,airflow,...position,manual:!!ov.manual});
   }
  }
  return out.filter(x=>!(state.removedTerminals||[]).includes(x.id));
@@ -328,6 +329,7 @@ function aStar(start,end,floorId){
  const key=(x,y)=>x+','+y;
  const inPolygon=(p,poly)=>{let hit=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)hit=!hit}return hit};
  const wallDistance=(p,poly)=>{let best=Infinity;for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));best=Math.min(best,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy))}return best};
+ if(envelope?.length>=3&&(!inPolygon(start,envelope)||!inPolygon(end,envelope)))return null;
  const blocked=(x,y)=>{const p={x:x*grid,y:y*grid};return zones.some(z=>insideRect(p.x,p.y,z,10))||(envelope?.length>=3&&!inPolygon(p,envelope)&&Math.hypot(p.x-end.x,p.y-end.y)>grid&&Math.hypot(p.x-start.x,p.y-start.y)>grid)};
  const wallCost=(x,y)=>{const p={x:x*grid,y:y*grid},room=roomShapes.find(r=>inPolygon(p,r.polygon));if(!room)return 0;return Math.min(1.5,Math.max(0,wallDistance(p,room.polygon)-20)/60)};
  const open=[{x:sx,y:sy,g:0,f:Math.abs(ex-sx)+Math.abs(ey-sy),dir:null}];
@@ -339,7 +341,7 @@ function aStar(start,end,floorId){
    const cells=[[cur.x*grid,cur.y*grid]];let k=ck;
    while(came.has(k)){const p=came.get(k);cells.push([p.x*grid,p.y*grid]);k=key(p.x,p.y)}
    cells.reverse();const pts=simplifyPoints([[start.x,start.y],...cells,[end.x,end.y]]);
-   return pts.some((p,i)=>i&&zones.some(z=>segmentHitsZone(pts[i-1],p,z)))?null:pts;
+   return pts.some((p,i)=>{if(!i)return false;const a=pts[i-1],steps=Math.max(1,Math.ceil(Math.hypot(p[0]-a[0],p[1]-a[1])/5));for(let n=0;n<=steps;n++){const q={x:a[0]+(p[0]-a[0])*n/steps,y:a[1]+(p[1]-a[1])*n/steps};if(envelope?.length>=3&&!inPolygon(q,envelope))return true}return zones.some(z=>segmentHitsZone(a,p,z))})?null:pts;
   }
   for(const [dx,dy,dir] of [[1,0,'h'],[-1,0,'h'],[0,1,'v'],[0,-1,'v']]){
    const nx=cur.x+dx,ny=cur.y+dy;
@@ -359,7 +361,7 @@ function routePoints(source,tn){
  const halls=state.rooms.filter(r=>r.floorId===tn.floorId&&r.type==='hall');
  let best=null;
  for(const hall of halls){
-  const via={x:hall.x+hall.w/2,y:hall.y+hall.hpx/2};
+  const via=VentPlanGeometry.roomPoint(hall,{x:hall.x+hall.w/2,y:hall.y+hall.hpx/2});
   const first=aStar(source,via,tn.floorId),second=aStar(via,tn,tn.floorId);
   if(!first||!second)continue;
   const pts=simplifyPoints([...first,...second.slice(1)]),px=pathPixels(pts);
@@ -367,7 +369,7 @@ function routePoints(source,tn){
  }
  return best||{pts:direct,px:pathPixels(direct),viaHall:false};
 }
-function distributionBoxes(f){const ts=terminals().filter(x=>x.floorId===f.id),base=state.unit.floorId===f.id?state.unit:f.riser;if(!base||base.x<0)return [];return ['supply','extract'].filter(kind=>ts.some(x=>x.role===kind)).map(kind=>({floorId:f.id,role:kind,x:state.boxOverrides?.[f.id+':'+kind]?.x??Math.max(60,Math.min(940,base.x+(kind==='supply'?-85:85))),y:state.boxOverrides?.[f.id+':'+kind]?.y??Math.max(65,Math.min(630,base.y+72)),base}))}
+function distributionBoxes(f){const ts=terminals().filter(x=>x.floorId===f.id),base=state.unit.floorId===f.id?state.unit:f.riser;if(!base||base.x<0)return [];const room=state.rooms.find(r=>r.floorId===f.id&&r.polygon?.length&&VentPlanGeometry.inside(base,r.polygon));return ['supply','extract'].filter(kind=>ts.some(x=>x.role===kind)).map(kind=>{const preferred={x:state.boxOverrides?.[f.id+':'+kind]?.x??Math.max(60,Math.min(940,base.x+(kind==='supply'?-85:85))),y:state.boxOverrides?.[f.id+':'+kind]?.y??Math.max(65,Math.min(630,base.y+72))};const position=room?VentPlanGeometry.roomPoint(room,preferred):preferred;return {floorId:f.id,role:kind,...position,base}})}
 function trunkRoutes(){return state.floors.flatMap(f=>distributionBoxes(f).map(box=>{const pts=aStar(box.base,box,f.id);return {...box,pts:pts||[],valid:!!pts,length:pathPixels(pts)*(f.scale||.012),bends:Math.max(0,(pts?.length||0)-2)}}))}
 function routes(){const trunks=trunkRoutes();return terminals().map(tn=>{const f=state.floors.find(x=>x.id===tn.floorId),box=distributionBoxes(f).find(x=>x.role===tn.role),trunk=trunks.find(x=>x.floorId===tn.floorId&&x.role===tn.role),route=box?routePoints(box,tn):{pts:null,px:0,viaHall:false};return {...tn,pts:route.pts||[],valid:!!route.pts&&!!trunk?.valid,viaHall:route.viaHall,length:route.px*(f?.scale||.012),bends:Math.max(0,(route.pts?.length||0)-2)}})}
 function total(){const ts=terminals(),s=ts.filter(x=>x.role==='supply').reduce((a,b)=>a+b.airflow,0),e=ts.filter(x=>x.role==='extract').reduce((a,b)=>a+b.airflow,0),a=state.rooms.reduce((a,b)=>a+b.area,0);return{a,s,e,d:s-e}}
@@ -474,7 +476,7 @@ const notice=recognition&&!recognition.reviewed?`<div class="status" ${recogniti
 const pointRows=points.map(pt=>`<div class="roomTerminal"><span>${pt.role==='supply'?t('supply'):t('extract')} · ${pt.lines}×Ø${pt.diameter}</span><input type="number" min="1" max="300" step="1" aria-label="${pt.role==='supply'?t('supply'):t('extract')} m³/h" value="${pt.airflow}" onchange="editTerminal('${pt.id}',this.value)"><span>m³/h</span><button onclick="removeTerminal('${pt.id}')" aria-label="${t('removeTerminal')} ${pt.role==='supply'?t('supply'):t('extract')}">×</button></div>`).join('');
 el.innerHTML=notice+`<h3>${t('inspector')}</h3><label>${t('name')}<input value="${esc(r.name)}" onchange="edit('${r.id}','name',this.value,true)"></label><label>${t('type')}<select onchange="changeType('${r.id}',this.value)">${TYPES.map(k=>`<option value="${k}" ${k===r.type?'selected':''}>${typeLabel(k)}</option>`).join('')}</select></label><div class="two"><label>${t('roomArea')}<input type="number" step="0.01" value="${r.area}" onchange="edit('${r.id}','area',+this.value,true)"></label><label>${t('height')}<input type="number" step="0.1" value="${r.h}" onchange="edit('${r.id}','h',+this.value,true)"></label></div><p class="note">${t(r.areaSource==='drawing'?'areaDrawing':r.areaSource==='calibrated'?'areaCalibrated':r.areaSource==='manual'?'areaManual':'areaUnknown')}</p>${mixed?`<div class="two"><label>${t('supply')} m³/h<input type="number" min="0" value="${roomAirflows(r).supply}" onchange="edit('${r.id}','supplyAirflow',+this.value,true)"></label><label>${t('extract')} m³/h<input type="number" min="0" value="${roomAirflows(r).extract}" onchange="edit('${r.id}','extractAirflow',+this.value,true)"></label></div>`:`<label>${t('airflow')}<input type="number" min="0" value="${r.airflow}" onchange="edit('${r.id}','airflow',+this.value,true)"></label>`}<div class="pill"><strong>${t('direction')}:</strong> ${mixed?t('supply')+' + '+t('extract'):role(r.type)==='supply'?t('supply'):role(r.type)==='extract'?t('extract'):t('transit')}<br><strong>${t('terminalPoints')}:</strong> ${points.length}<br><strong>${t('routeLen')}:</strong> ${rs.length?rs.every(x=>x.valid)?rs.reduce((n,x)=>n+x.length*x.lines,0).toFixed(1)+' m':t('routeBlocked'):'—'}<br><strong>${t('scale')}:</strong> ${f.calibrated?t('calibrated'):t('notCalibrated')}</div><h3>${t('terminalPoints')}</h3><div class="roomTerminalList">${pointRows||`<p class="note">${t('noProject')}</p>`}</div><div class="terminalButtons"><button class="toolBtn" onclick="addTerminal('${r.id}','supply')">${t('addSupply')}</button><button class="toolBtn" onclick="addTerminal('${r.id}','extract')">${t('addExtract')}</button></div><p class="note">${t('autoLayoutNote')}</p>${routeNote}<p class="note">${t('terminalInfo')}</p><button class="toolBtn dangerBtn" onclick="deleteRoom('${r.id}')">${t('deleteRoom')}</button>`}
 function bindSvgEvents(){const svg=document.getElementById('svg');svg.onpointerdown=pointerDown;svg.onpointermove=pointerMove;svg.onpointerup=pointerUp;svg.onpointercancel=pointerUp;svg.ondblclick=e=>{const z=e.target.closest?.('[data-zone]')?.dataset.zone;if(z){pushHistory();state.noGoZones=state.noGoZones.filter(x=>x.id!==z);render()}}}
-function pointerDown(e){const p=svgPoint(e),roomEl=e.target.closest?.('[data-room]'),termEl=e.target.closest?.('[data-terminal]'),boxEl=e.target.closest?.('[data-box]'),cornerEl=e.target.closest?.('[data-corner]'),resize=e.target.dataset.resize;selectedZone=null;if(tool==='addroom'){placeRoomAt(p);return}if(tool==='unit'){pushHistory();state.unit={floorId:state.selectedFloorId,x:p.x,y:p.y};setTool('select');render();return}if(tool==='riser'){pushHistory();const f=state.floors.find(x=>x.id===state.selectedFloorId);f.riser={x:p.x,y:p.y};setTool('select');render();return}if(tool==='calibrate'){calPts.push(p);if(calPts.length===2){const [a,b]=calPts,px=Math.hypot(b.x-a.x,b.y-a.y),m=prompt(t('enterMeters'),'5');if(m&&+m>0&&px>5){pushHistory();const f=state.floors.find(x=>x.id===state.selectedFloorId);f.scale=+m/px;f.calibrated=true;state.calibrationLines[f.id]={x1:a.x,y1:a.y,x2:b.x,y2:b.y,meters:+m};toast(t('scaleUpdated'))}calPts=[];setTool('select');render()}else updateHint();return}if(tool==='nogozone'){interaction={kind:'zone',start:p,current:p};renderDraftZone();svg.setPointerCapture?.(e.pointerId);return}if(cornerEl&&roomEl){const r=state.rooms.find(x=>x.id===roomEl.dataset.room);if(r?.polygon){selected=r.id;panel='inspector';pushHistory();interaction={kind:'corner',roomId:r.id,index:Number(cornerEl.dataset.corner)};svg.setPointerCapture?.(e.pointerId);return}}if(boxEl){pushHistory();interaction={kind:'box',key:boxEl.dataset.box};svg.setPointerCapture?.(e.pointerId);return}if(termEl){const id=termEl.dataset.terminal,tn=terminals().find(x=>x.id===id);if(!tn)return;selected=tn.roomId;panel='inspector';pushHistory();interaction={kind:'terminal',terminalId:id};svg.setPointerCapture?.(e.pointerId);render();return}if(resize){selected=resize;panel='inspector';const r=state.rooms.find(x=>x.id===resize);pushHistory();interaction={kind:'resize',roomId:resize,start:p,ow:r.w,oh:r.hpx,polygon:r.polygon?.map(q=>({...q}))};svg.setPointerCapture?.(e.pointerId);return}if(roomEl){const rid=roomEl.dataset.room;selected=rid;panel='inspector';const r=state.rooms.find(x=>x.id===rid);pushHistory();interaction={kind:'room',roomId:rid,start:p,ox:r.x,oy:r.y,polygon:r.polygon?.map(q=>({...q})),extras:(state.extraTerminals||[]).filter(x=>x.roomId===rid).map(x=>({id:x.id,x:x.x,y:x.y}))};svg.setPointerCapture?.(e.pointerId);render();return}selected=null;render()}
+function pointerDown(e){const p=svgPoint(e),roomEl=e.target.closest?.('[data-room]'),termEl=e.target.closest?.('[data-terminal]'),boxEl=e.target.closest?.('[data-box]'),cornerEl=e.target.closest?.('[data-corner]'),resize=e.target.dataset.resize;selectedZone=null;if(tool==='addroom'){placeRoomAt(p);return}if(tool==='unit'){pushHistory();state.unit={floorId:state.selectedFloorId,x:p.x,y:p.y};setTool('select');render();return}if(tool==='riser'){pushHistory();const f=state.floors.find(x=>x.id===state.selectedFloorId);f.riser={x:p.x,y:p.y};setTool('select');render();return}if(tool==='calibrate'){calPts.push(p);if(calPts.length===2){const [a,b]=calPts,px=Math.hypot(b.x-a.x,b.y-a.y),m=prompt(t('enterMeters'),'5');if(m&&+m>0&&px>5){pushHistory();const f=state.floors.find(x=>x.id===state.selectedFloorId);f.scale=+m/px;f.calibrated=true;state.rooms.filter(r=>r.floorId===f.id&&!['drawing','manual'].includes(r.areaSource)).forEach(r=>{r.area=Number(((r.polygon?.length?polygonArea(r.polygon):r.w*r.hpx)*f.scale*f.scale).toFixed(2));r.areaSource='calibrated'});state.calibrationLines[f.id]={x1:a.x,y1:a.y,x2:b.x,y2:b.y,meters:+m};toast(t('scaleUpdated'))}calPts=[];setTool('select');render()}else updateHint();return}if(tool==='nogozone'){interaction={kind:'zone',start:p,current:p};renderDraftZone();svg.setPointerCapture?.(e.pointerId);return}if(cornerEl&&roomEl){const r=state.rooms.find(x=>x.id===roomEl.dataset.room);if(r?.polygon){selected=r.id;panel='inspector';pushHistory();interaction={kind:'corner',roomId:r.id,index:Number(cornerEl.dataset.corner)};svg.setPointerCapture?.(e.pointerId);return}}if(boxEl){pushHistory();interaction={kind:'box',key:boxEl.dataset.box};svg.setPointerCapture?.(e.pointerId);return}if(termEl){const id=termEl.dataset.terminal,tn=terminals().find(x=>x.id===id);if(!tn)return;selected=tn.roomId;panel='inspector';pushHistory();interaction={kind:'terminal',terminalId:id};svg.setPointerCapture?.(e.pointerId);render();return}if(resize){selected=resize;panel='inspector';const r=state.rooms.find(x=>x.id===resize);pushHistory();interaction={kind:'resize',roomId:resize,start:p,ow:r.w,oh:r.hpx,polygon:r.polygon?.map(q=>({...q}))};svg.setPointerCapture?.(e.pointerId);return}if(roomEl){const rid=roomEl.dataset.room;selected=rid;panel='inspector';const r=state.rooms.find(x=>x.id===rid);pushHistory();interaction={kind:'room',roomId:rid,start:p,ox:r.x,oy:r.y,polygon:r.polygon?.map(q=>({...q})),extras:(state.extraTerminals||[]).filter(x=>x.roomId===rid).map(x=>({id:x.id,x:x.x,y:x.y}))};svg.setPointerCapture?.(e.pointerId);render();return}selected=null;render()}
 function pointerMove(e){if(!interaction)return;const p=svgPoint(e);if(interaction.kind==='zone'){interaction.current=p;renderDraftZone();return}if(interaction.kind==='box'){state.boxOverrides??={};state.boxOverrides[interaction.key]={x:Math.max(50,Math.min(950,p.x)),y:Math.max(50,Math.min(650,p.y))};renderLight();return}if(interaction.kind==='corner'){const r=state.rooms.find(x=>x.id===interaction.roomId);r.polygon[interaction.index]={x:Math.max(0,Math.min(1000,p.x)),y:Math.max(0,Math.min(700,p.y))};r.x=Math.min(...r.polygon.map(q=>q.x));r.y=Math.min(...r.polygon.map(q=>q.y));r.w=Math.max(...r.polygon.map(q=>q.x))-r.x;r.hpx=Math.max(...r.polygon.map(q=>q.y))-r.y;if(r.areaSource==='calibrated'){const f=state.floors.find(x=>x.id===r.floorId);r.area=Number((polygonArea(r.polygon)*f.scale*f.scale).toFixed(2))}renderLight();return}if(interaction.kind==='terminal'){const extra=(state.extraTerminals||[]).find(x=>x.id===interaction.terminalId);if(extra){extra.x=p.x;extra.y=p.y}else state.terminalOverrides[interaction.terminalId]={...(state.terminalOverrides[interaction.terminalId]||{}),x:p.x,y:p.y,manual:true};renderLight();return}if(interaction.kind==='room'){const r=state.rooms.find(x=>x.id===interaction.roomId);r.x=Math.max(10,Math.min(990-r.w,interaction.ox+p.x-interaction.start.x));r.y=Math.max(10,Math.min(690-r.hpx,interaction.oy+p.y-interaction.start.y));if(interaction.polygon)r.polygon=interaction.polygon.map(q=>({x:q.x+r.x-interaction.ox,y:q.y+r.y-interaction.oy}));for(const old of interaction.extras){const extra=(state.extraTerminals||[]).find(x=>x.id===old.id);if(extra){extra.x=old.x+r.x-interaction.ox;extra.y=old.y+r.y-interaction.oy}}renderLight();return}if(interaction.kind==='resize'){const r=state.rooms.find(x=>x.id===interaction.roomId);r.w=Math.max(70,Math.min(900-r.x,interaction.ow+p.x-interaction.start.x));r.hpx=Math.max(55,Math.min(650-r.y,interaction.oh+p.y-interaction.start.y));if(interaction.polygon)r.polygon=interaction.polygon.map(q=>({x:r.x+(q.x-r.x)*r.w/interaction.ow,y:r.y+(q.y-r.y)*r.hpx/interaction.oh}));if(r.areaSource==='calibrated'){const f=state.floors.find(x=>x.id===r.floorId);r.area=Number((polygonArea(r.polygon)*f.scale*f.scale).toFixed(2))}renderLight()}}
 function pointerUp(e){if(!interaction)return;if(interaction.kind==='zone'){const a=interaction.start,b=interaction.current,x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);if(w>20&&h>20){pushHistory();state.noGoZones.push({id:'z'+Date.now(),floorId:state.selectedFloorId,x,y,w,h})}}interaction=null;render()}
 function renderDraftZone(){render();if(!interaction||interaction.kind!=='zone')return;const a=interaction.start,b=interaction.current,x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);document.getElementById('svg').insertAdjacentHTML('beforeend',`<rect class="nogozone" x="${x}" y="${y}" width="${w}" height="${h}"/>`)}
@@ -554,7 +556,7 @@ async function useFile(){
   f.bg=plan.image;f.documentText=plan.documentText;f.envelope=null;f.calibrated=false;delete state.calibrationLines[f.id];
   const stale=state.rooms.filter(r=>r.floorId===f.id).map(r=>r.id);
   state.rooms=state.rooms.filter(r=>r.floorId!==f.id);
-  stale.forEach(id=>delete state.terminalOverrides[id]);
+  Object.keys(state.terminalOverrides).forEach(id=>{if(stale.some(rid=>id===rid||id.startsWith('t'+rid+'_')))delete state.terminalOverrides[id]});
   state.extraTerminals=(state.extraTerminals||[]).filter(x=>!stale.includes(x.roomId));
   state.removedTerminals=(state.removedTerminals||[]).filter(id=>!stale.some(rid=>id.startsWith('t'+rid+'_')));
   delete state.boxOverrides[f.id+':supply'];delete state.boxOverrides[f.id+':extract'];
@@ -569,6 +571,7 @@ async function wallAlignment(imageUrl,rooms){
  const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=700;
  const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,0,1000,700);
  const pixels=context.getImageData(0,0,1000,700).data;
+ const refined=VentPlanGeometry.snapRooms(pixels,1000,700,rooms);rooms.splice(0,rooms.length,...refined);
  let darkPixels=0;for(let y=15;y<685;y+=5)for(let x=15;x<985;x+=5){const k=(y*1000+x)*4;if((pixels[k]+pixels[k+1]+pixels[k+2])/3<115)darkPixels++}
  const density=darkPixels/(134*194);
  // Pale or photographic plans cannot be judged by this high-contrast wall check.
@@ -583,10 +586,13 @@ async function wallAlignment(imageUrl,rooms){
   return total>=12&&supported/total<.24?[room.name]:[];
  });
 }
+let recognitionRunning=false;
 async function recognize(){
+ if(recognitionRunning)return;
  const f=state.floors.find(x=>x.id===state.selectedFloorId);if(!f?.bg){toast(t('planFirst'));openUpload();return}
  const auth=await window.ventPlannerSession?.();
  if(!auth?.access_token){state.recognition={...(state.recognition||{}),floorId:f.id,reviewed:false,pendingAuth:true,uncertainties:state.recognition?.uncertainties||[]};saveSilent();render();toast(t('recognitionLogin'));window.openAuth?.();return}
+ recognitionRunning=true;
  if(state.recognition)state.recognition.pendingAuth=false;
  const button=document.getElementById('recognizeBtn');if(button){button.disabled=true;button.querySelector('[data-i18n="drawPlan"]').textContent=t('recognitionBusy')}
  toast(t('recognitionWorking'));
@@ -597,7 +603,7 @@ async function recognize(){
   const draft=await response.json();if(!response.ok)throw Error((t(draft.error)||draft.error)+((draft.quality||[]).length?' — '+draft.quality.map(x=>t(x)).join(' · '):''));if(!draft.rooms?.length)throw Error(t('no_rooms_found'));const unmatched=await wallAlignment(f.bg,draft.rooms);if(unmatched.length)throw Error(t('wallsUnmatched')+' '+unmatched.slice(0,3).join(', '));
   pushHistory();const removed=state.rooms.filter(r=>r.floorId===f.id).map(r=>r.id);
   state.rooms=state.rooms.filter(r=>r.floorId!==f.id);
-  removed.forEach(id=>delete state.terminalOverrides[id]);state.extraTerminals=(state.extraTerminals||[]).filter(x=>!removed.includes(x.roomId));state.removedTerminals=(state.removedTerminals||[]).filter(id=>!removed.some(rid=>id.startsWith('t'+rid+'_')));
+  Object.keys(state.terminalOverrides).forEach(id=>{if(removed.some(rid=>id===rid||id.startsWith('t'+rid+'_')))delete state.terminalOverrides[id]});state.extraTerminals=(state.extraTerminals||[]).filter(x=>!removed.includes(x.roomId));state.removedTerminals=(state.removedTerminals||[]).filter(id=>!removed.some(rid=>id.startsWith('t'+rid+'_')));
   const idBase=Date.now();
   draft.rooms.forEach((r,i)=>{const polygon=Array.isArray(r.polygon)?r.polygon:[],printed=Number(r.areaM2);state.rooms.push({id:'auto'+idBase+'_'+i,floorId:f.id,name:r.name,type:r.type,
    area:r.areaM2!=null&&Number.isFinite(printed)?printed:f.calibrated?Number((polygonArea(polygon)*f.scale*f.scale).toFixed(2)):0,
@@ -605,7 +611,7 @@ async function recognize(){
   state.unit=draft.unit?{floorId:f.id,x:draft.unit.x,y:draft.unit.y}:{floorId:f.id,x:-100,y:-100};
   f.envelope=draft.envelope||null;state.recognition={floorId:f.id,reviewed:false,roomCount:draft.rooms.length,expectedRoomCount:draft.expectedRoomCount,quality:draft.quality||[],uncertainties:[...(!draft.unit?[t('unitMissing')]:[]),...(draft.uncertainties||[])]};
   selected=state.rooms[0]?.id||null;panel='bom';saveSilent();render();toast(t('drawReady'));
- }catch(e){console.error(e);state.recognition={floorId:f.id,reviewed:false,error:e.message||t('recognition_unavailable')};saveSilent();render();toast(e.message||t('recognition_unavailable'))}finally{if(button){button.disabled=false;button.querySelector('[data-i18n="drawPlan"]').textContent=t('drawPlan')}}
+ }catch(e){console.error(e);state.recognition={floorId:f.id,reviewed:false,error:e.message||t('recognition_unavailable')};saveSilent();render();toast(e.message||t('recognition_unavailable'))}finally{recognitionRunning=false;if(button){button.disabled=false;button.querySelector('[data-i18n="drawPlan"]').textContent=t('drawPlan')}}
 }
 function confirmRecognition(){if(!state.recognition||state.recognition.floorId!==state.selectedFloorId)return;pushHistory();state.recognition.reviewed=true;saveSilent();render()}
 function openPlanQuestions(){
@@ -652,7 +658,7 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       authTitle: 'Sign in to VENT IT', authInfo: 'Įvesk el. paštą. Atsiųsime vienkartinę prisijungimo nuorodą.',
       emailPlaceholder: 'vardas@example.com', cancel: 'Atšaukti', send: 'Siųsti nuorodą', close: 'Uždaryti', signOut: 'Atsijungti',
       signedIn: 'Prisijungta kaip', linkSent: 'Nuoroda išsiųsta. Jei atidaryta nuoroda neveikia, nukopijuok jos adresą iš laiško ir įklijuok žemiau.',
-      pasteInfo: 'Neveikia laiško nuoroda? Ant „Confirm email address“ spausk dešinį klavišą (telefone palaikyk) → „Kopijuoti nuorodos adresą“ ir įklijuok čia. Nuorodos niekam nesiųsk.', pastePlaceholder: 'Įklijuok visą laiško nuorodą', confirmLink: 'Patvirtinti nuorodą', invalidLink: 'Įklijuok visą nuorodą iš VENT IT prisijungimo laiško.', expiredLink: 'Nuoroda nebegalioja arba jau panaudota. Išsiųsk naują ir nukopijuok jos adresą jos neatidarydamas.',
+      pasteInfo: 'Jei laiške yra vienkartinis kodas, įrašyk jį čia. Neveikia laiško nuoroda? Ant „Confirm email address“ spausk dešinį klavišą (telefone palaikyk) → „Kopijuoti nuorodos adresą“ ir įklijuok čia. Nuorodos niekam nesiųsk.', pastePlaceholder: 'Laiško nuoroda arba vienkartinis kodas', confirmLink: 'Patvirtinti nuorodą', invalidLink: 'Įklijuok visą nuorodą iš VENT IT prisijungimo laiško.', expiredLink: 'Nuoroda nebegalioja arba jau panaudota. Išsiųsk naują ir nukopijuok jos adresą jos neatidarydamas.',
       authMissing: 'Supabase aplinkos kintamieji nesukonfigūruoti.', authError: 'Prisijungimo klaida',
       empty: 'Dar nėra išsaugotų projektų.', loginToSee: 'Prisijunk, kad matytum projektus.',
       cloudSaved: 'Projektas išsaugotas debesyje.', cloudLoaded: 'Projektas užkrautas iš Supabase.',
@@ -665,7 +671,7 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       authTitle: 'Logg inn på VENT IT', authInfo: 'Skriv inn e-postadressen din. Vi sender en engangslenke for innlogging.',
       emailPlaceholder: 'navn@eksempel.no', cancel: 'Avbryt', send: 'Send lenke', close: 'Lukk', signOut: 'Logg ut',
       signedIn: 'Innlogget som', linkSent: 'Lenken er sendt. Hvis den ikke åpnes, kopier lenkeadressen fra e-posten og lim den inn nedenfor.',
-      pasteInfo: 'Virker ikke e-postlenken? Høyreklikk på «Confirm email address» (hold inne på mobil), kopier lenkeadressen og lim den inn her. Ikke del lenken.', pastePlaceholder: 'Lim inn hele e-postlenken', confirmLink: 'Bekreft lenken', invalidLink: 'Lim inn hele lenken fra VENT IT-e-posten.', expiredLink: 'Lenken er utløpt eller brukt. Send en ny og kopier adressen uten å åpne den.',
+      pasteInfo: 'Hvis e-posten inneholder en engangskode, skriv den her. Virker ikke e-postlenken? Høyreklikk på «Confirm email address» (hold inne på mobil), kopier lenkeadressen og lim den inn her. Ikke del lenken.', pastePlaceholder: 'E-postlenke eller engangskode', confirmLink: 'Bekreft lenken', invalidLink: 'Lim inn hele lenken fra VENT IT-e-posten.', expiredLink: 'Lenken er utløpt eller brukt. Send en ny og kopier adressen uten å åpne den.',
       authMissing: 'Supabase-miljøvariabler er ikke konfigurert.', authError: 'Innloggingsfeil',
       empty: 'Ingen lagrede prosjekter ennå.', loginToSee: 'Logg inn for å se prosjektene dine.',
       cloudSaved: 'Prosjektet er lagret i skyen.', cloudLoaded: 'Prosjektet er lastet fra Supabase.',
@@ -678,7 +684,7 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
       authTitle: 'Sign in to VENT IT', authInfo: 'Enter your email. We will send a one-time sign-in link.',
       emailPlaceholder: 'name@example.com', cancel: 'Cancel', send: 'Send link', close: 'Close', signOut: 'Sign out',
       signedIn: 'Signed in as', linkSent: 'Link sent. If opening it fails, copy its address from the email and paste it below.',
-      pasteInfo: 'Email link not working? Right-click “Confirm email address” (press and hold on mobile), copy the link address, and paste it here. Do not share this link.', pastePlaceholder: 'Paste the complete email link', confirmLink: 'Confirm link', invalidLink: 'Paste the complete link from the VENT IT email.', expiredLink: 'The link has expired or was already used. Send a new one and copy its address without opening it.',
+      pasteInfo: 'If the email includes a one-time code, enter it here. Email link not working? Right-click “Confirm email address” (press and hold on mobile), copy the link address, and paste it here. Do not share this link.', pastePlaceholder: 'Email link or one-time code', confirmLink: 'Confirm link', invalidLink: 'Paste the complete link from the VENT IT email.', expiredLink: 'The link has expired or was already used. Send a new one and copy its address without opening it.',
       authMissing: 'Supabase environment variables are not configured.', authError: 'Authentication error',
       empty: 'No saved projects yet.', loginToSee: 'Sign in to see your projects.',
       cloudSaved: 'Project saved to the cloud.', cloudLoaded: 'Project loaded from Supabase.',
@@ -933,7 +939,14 @@ render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{r
     const input = document.getElementById('authLink');
     const button = document.getElementById('authConfirmLink');
     try {
-      let link = new URL(input?.value?.trim() || '');
+      const entry=input?.value?.trim()||'';
+      if(/^\d{6,10}$/.test(entry)){
+        if(button)button.disabled=true;
+        const {data,error}=await sb.auth.verifyOtp({email:document.getElementById('authEmail').value.trim(),token:entry,type:'email'});
+        if(error||!data?.session)throw Error(c('expiredLink'));
+        input.value='';session=data.session;closeAuth();renderCloudChrome();await refreshProjects();return;
+      }
+      let link = new URL(entry);
       // Outlook may wrap the original confirmation link in Safe Links.
       if (link.hostname.toLowerCase().endsWith('.safelinks.protection.outlook.com')) {
         link = new URL(link.searchParams.get('url') || '');

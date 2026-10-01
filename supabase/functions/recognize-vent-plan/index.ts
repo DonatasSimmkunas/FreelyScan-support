@@ -83,7 +83,7 @@ Deno.serve(async request => {
     if (!rooms.length) return reply({ error: "no_rooms_found", uncertainties: draft.uncertainties || [] }, 422, headers);
     const quality: string[] = [];
     const expected = Number(draft.expectedRoomCount);
-    if (Number.isInteger(expected) && expected > rooms.length) quality.push("room_count_mismatch");
+    if (!Number.isInteger(expected) || expected !== rooms.length) quality.push("room_count_mismatch");
     if (rooms.some(room => room.areaM2 === null)) quality.push("unverified_area");
     const inside = (point: { x: number; y: number }, polygon: { x: number; y: number }[]) => {
       let hit = false;
@@ -123,7 +123,8 @@ Deno.serve(async request => {
     const hardFailures = quality.filter(x => ["missing_building_footprint", "rooms_outside_footprint", "overlapping_rooms", "room_count_mismatch"].includes(x));
     if (hardFailures.length) return reply({ error: "recognition_geometry_uncertain", quality: hardFailures,
       uncertainties: (Array.isArray(draft.uncertainties) ? draft.uncertainties : []).slice(0, 8) }, 422, headers);
-    const unit = draft.unit && inside(draft.unit, envelope) ? { x: clamp(draft.unit.x, 0, 1000), y: clamp(draft.unit.y, 0, 700) } : null;
+    const serviceRooms=rooms.filter(r=>["technical","utility"].includes(r.type));
+    const unit = draft.unit && inside(draft.unit, envelope) && serviceRooms.some(r=>inside(draft.unit,r.polygon)) ? { x: clamp(draft.unit.x, 0, 1000), y: clamp(draft.unit.y, 0, 700) } : null;
     return reply({ rooms, envelope, unit,
       expectedRoomCount: Number.isInteger(expected) && expected >= 0 && expected <= 40 ? expected : null, quality,
       uncertainties: (Array.isArray(draft.uncertainties) ? draft.uncertainties : []).slice(0, 8).map((x: unknown) => String(x).slice(0, 180)) }, 200, headers);

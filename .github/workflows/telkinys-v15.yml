@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout the isolated V15 work branch
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Apply reviewed source corrections
+        run: node telkinys-v15/finalize-source.mjs
       - name: Validate modules, template and CSP; build candidate
         run: node telkinys-v15/build.mjs --write-deployment-artifact
       - name: Upload review source and built preview
@@ -27,12 +29,12 @@ jobs:
             telkinys-v15/
             dist/
           retention-days: 7
-      - name: Save generated HTML only to the isolated V15 work branch
+      - name: Save validated source and HTML only to the isolated V15 work branch
         if: success() && github.ref == 'refs/heads/telkinys-v15-work'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- telkinys-deploy/index.html
+          git add -- telkinys-v15/needs.js telkinys-v15/access.js telkinys-deploy/index.html
           if ! git diff --cached --quiet; then
             git commit -m 'Build validated V15 candidate [skip ci]'
             git push origin HEAD:telkinys-v15-work

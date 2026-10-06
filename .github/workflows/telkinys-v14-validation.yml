@@ -1,0 +1,41 @@
+name: Telkinys V14 validation
+on:
+  push:
+    branches: [telkinys-v14-readiness]
+    paths:
+      - 'telkinys-v14/**'
+      - '.github/workflows/telkinys-v14-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: telkinys-v14-validation
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the isolated candidate branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate source and build candidate
+        run: node telkinys-v14/build.mjs --apply-reviewed-fixes --write-deployment-artifact
+      - name: Upload reviewable source and build
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: telkinys-v14-review
+          path: |
+            telkinys-v14/
+            dist/
+          retention-days: 7
+          if-no-files-found: error
+      - name: Save validated artifact only to candidate branch
+        if: success() && github.ref == 'refs/heads/telkinys-v14-readiness'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add telkinys-v14/*.js telkinys-deploy/index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Build validated Telkinys V14 candidate [skip ci]'
+          git push origin HEAD:telkinys-v14-readiness

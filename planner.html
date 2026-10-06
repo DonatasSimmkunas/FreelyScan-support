@@ -180,16 +180,16 @@ body.hasUploadedPlan .stats{padding-top:7px;padding-bottom:9px}
   </div>
 </div></div>
 <div class="toast" id="toast"></div><div class="plannerCookieBar" id="plannerCookieBar"><p id="plannerCookieText">Essential storage keeps your project and language preferences. Optional anonymous analytics help us improve the Planner. <a href="cookies.html">Details</a>.</p><div class="acts"><button id="plannerCookieReject" class="ghost" onclick="plannerConsent('denied')">Essential only</button><button id="plannerCookieAccept" onclick="plannerConsent('granted')">Allow analytics</button></div></div>
-<script src="plan-geometry.js?v=20261006-evidence2"></script>
-<script src="plan-ocr.js?v=20261006-evidence2"></script>
-<script src="plan-raster.js?v=20261006-evidence2"></script>
-<script src="plan-evidence.js?v=20261006-evidence2"></script>
-<script src="plan-jobs.js?v=20261006-evidence2"></script>
+<script src="plan-geometry.js?v=20261006-evidence3"></script>
+<script src="plan-ocr.js?v=20261006-evidence3"></script>
+<script src="plan-raster.js?v=20261006-evidence3"></script>
+<script src="plan-evidence.js?v=20261006-evidence3"></script>
+<script src="plan-jobs.js?v=20261006-evidence3"></script>
 
-<script src="plan-routing.js?v=20261006-evidence2"></script>
-<script src="plan-reliability.js?v=20261006-evidence2"></script>
-<script src="plan-reliability-ui.js?v=20261006-evidence2"></script>
-<script src="plan-auto.js?v=20261006-evidence2"></script><script src="plan-auto-ui.js?v=20261006-evidence2"></script>
+<script src="plan-routing.js?v=20261006-evidence3"></script>
+<script src="plan-reliability.js?v=20261006-evidence3"></script>
+<script src="plan-reliability-ui.js?v=20261006-evidence3"></script>
+<script src="plan-auto.js?v=20261006-evidence3"></script><script src="plan-auto-ui.js?v=20261006-evidence3"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 
@@ -317,7 +317,7 @@ window.addEventListener('error',e=>plannerTrack('client_error',{message:String(e
 function shareProject(){const copy=JSON.parse(JSON.stringify(state));for(const f of copy.floors||[])delete f.bg;const payload=btoa(unescape(encodeURIComponent(JSON.stringify(copy))));const url=location.origin+location.pathname+'#share='+payload;navigator.clipboard?.writeText(url).then(()=>toast(t('shareCopied'))).catch(()=>prompt('Copy project link:',url));plannerTrack('planner_export',{kind:'share'})}
 function loadSharedProject(){if(!location.hash.startsWith('#share='))return;try{const raw=decodeURIComponent(escape(atob(location.hash.slice(7))));const x=JSON.parse(raw);state={...defaultState(),...x,terminalOverrides:x.terminalOverrides||{},noGoZones:x.noGoZones||[],calibrationLines:x.calibrationLines||{}};selected=state.rooms.find(r=>r.floorId===state.selectedFloorId)?.id||null}catch(e){console.warn('share decode',e)}}
 function exportReport(){const tt=total(),cs=checks(),bs=bom(),kits=buildStoreKits();const lang=state.lang;const w=window.open('','_blank');if(!w)return;const kitHtml=kits.length?kits.map(k=>'<h3>'+kitName(k.tier)+' — '+eur(k.subtotal)+'</h3><ul>'+k.lines.map(x=>'<li>'+esc(kitLineCopy(x).model)+' — '+(hasUncalibratedRoutes()&&['VENT-PROJECT-D75','VENT-PROJECT-D90','VENT-PROJECT-MAIN'].includes(x.sku)?t('notCalibrated'):x.qty+' × ')+(x.storePrice?eur(x.storePrice):t('kitPending'))+'</li>').join('')+'</ul>').join(''):'<p>'+t('kitLoading')+'</p>';const routeHtml=routes().map(r=>{const room=state.rooms.find(x=>x.id===r.roomId);return '<tr><td>'+esc(room?.name||r.roomId)+'</td><td>'+r.lines+'×Ø'+r.diameter+'</td><td>'+(!state.floors.find(f=>f.id===r.floorId)?.calibrated?t('notCalibrated'):r.valid?(r.length*r.lines).toFixed(1)+' m':t('routeBlocked'))+'</td></tr>'}).join('');w.document.write(`<!doctype html><html lang="${state.lang}"><head><meta charset="utf-8"><title>${esc(state.projectName)}</title><style>body{font-family:Arial,sans-serif;color:#173346;max-width:1000px;margin:auto;padding:34px}h1,h2,h3{color:#08263b}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #dfe8ee;text-align:left}.ok{color:#17865a}.warning{color:#a86f18}.fail{color:#b33434}.note{background:#f4f8fa;padding:12px;border-radius:10px}</style><style>.plan{width:100%;height:auto;max-height:680px;background:#f8fafb}.bgPlan{opacity:.78}.room{fill:#ffffff44;stroke:#21435b;stroke-width:2.5}.roomNamePlate,.routeTag rect,.terminalInfo{fill:#fff;stroke:#d3e0e8}.roomName,.routeTag text,.terminalInfoText{fill:#173346;font-size:11px}.route,.mainDuct,.routeCasing,.mainDuctCore{fill:none;stroke-linecap:round;stroke-linejoin:round}.routeCasing{stroke:#fff;stroke-width:11}.route{stroke-width:5}.route.supply,.mainDuct.supply{stroke:#2b7fff}.route.extract,.mainDuct.extract{stroke:#e45a5a}.mainDuct{stroke-width:10}.mainDuctCore{stroke:#fff;stroke-width:2;stroke-dasharray:7 7}.route.pending,.mainDuct.pending{stroke-dasharray:11 7}.terminal,.distBox rect{fill:#fff;stroke:#173346;stroke-width:3}.terminal.supply,.distBox.supply rect{stroke:#2b7fff}.terminal.extract,.distBox.extract rect{stroke:#e45a5a}.terminalPlenum{fill:#fff;stroke:#456274;stroke-width:2}.terminalGlyph,.distBox text{font-size:10px;fill:#173346;text-anchor:middle}.planNotice rect{fill:#08263b}.planNotice text{fill:#fff;font-size:12px}.roomText{font-size:10px}.routeBend{fill:#fff;stroke:#2b7fff;stroke-width:2}</style></head><body><h1>${t('reportTitle')}</h1>${window.reliabilityExportHtml?.()||''}<p><b>${esc(state.projectName)}</b> · ${new Date().toLocaleDateString({lt:'lt-LT',en:'en-GB',no:'nb-NO'}[state.lang])}</p><table><tr><td>${t('area')}</td><td>${tt.a.toFixed(1)} m²</td></tr><tr><td>${t('supply')}</td><td>${tt.s} m³/h</td></tr><tr><td>${t('extract')}</td><td>${tt.e} m³/h</td></tr><tr><td>${t('balance')}</td><td>${tt.d} m³/h</td></tr></table><h2>${t('materials')}</h2>${hasUncalibratedRoutes()?`<p class="note">${t('scaleEstimateWarning')}</p>`:''}<table>${bs.map(x=>'<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>').join('')}</table><p class="note">${t('exampleWarning')} ${t('estimateInfo')} ${t('routesSchematic')}</p><h2>${t('projectResidential')}</h2>${document.getElementById('svg').outerHTML}<h2>${t('routeSchedule')}</h2><table>${routeHtml}</table><h2>${t('checks')}</h2>${cs.map((c,i)=>'<p class="'+c[1]+'"><b>'+(i+1)+'. '+c[0]+'</b><br>'+c[2]+'</p>').join('')}<h2>${t('kitTitle')}</h2><p class="note">${t('capacityWarn')}</p>${kitHtml}<p class="note">${t('prelim')}</p></body></html>`);w.document.close();setTimeout(()=>w.print(),400);plannerTrack('planner_export',{kind:'pdf',rooms:state.rooms.length})}
-function setLang(lang){plannerTrack('language_change',{language:lang});state.lang=lang;translateDemoEntities(lang);for(const f of state.floors)if(f.autoName||/^(Floor \d+|\d+ aukštas|\d+\. etasje)$/.test(f.name)){f.autoName=true;f.name=localizedFloorName((f.level??state.floors.indexOf(f))+1)}document.documentElement.lang=lang;localStorage.setItem('ventit-planner-user-lang',lang);saveSilent();render()}function saveSilent(){try{localStorage.setItem('ventplan_v2',JSON.stringify(state));storageErrorShown=false;return true}catch(e){console.error('VENT local save',e);if(!storageErrorShown){storageErrorShown=true;toast(t('storageFull'))}return false}}
+function setLang(lang){document.getElementById('toast').classList.remove('show');document.getElementById('toast').textContent='';plannerTrack('language_change',{language:lang});state.lang=lang;translateDemoEntities(lang);for(const f of state.floors)if(f.autoName||/^(Floor \d+|\d+ aukštas|\d+\. etasje)$/.test(f.name)){f.autoName=true;f.name=localizedFloorName((f.level??state.floors.indexOf(f))+1)}document.documentElement.lang=lang;localStorage.setItem('ventit-planner-user-lang',lang);saveSilent();render()}function saveSilent(){try{localStorage.setItem('ventplan_v2',JSON.stringify(state));storageErrorShown=false;return true}catch(e){console.error('VENT local save',e);if(!storageErrorShown){storageErrorShown=true;toast(t('storageFull'))}return false}}
 function roomAirflows(r){return r.type==='livingKitchen'?{supply:Number(r.supplyAirflow??r.airflow??45),extract:Number(r.extractAirflow??45)}:{supply:role(r.type)==='supply'?Number(r.airflow)||0:0,extract:role(r.type)==='extract'?Number(r.airflow)||0:0}}
 function automaticTerminals(r){
  const flow=roomAirflows(r),out=[];
@@ -329,7 +329,7 @@ function automaticTerminals(r){
    const airflow=Number(ov.airflow??amount/count),mixed=r.type==='livingKitchen';
    const xRatio=mixed?(kind==='supply'?0.18+0.38*(i+0.5)/count:0.62+0.32*(i+0.5)/count):0.15+0.7*(i+0.5)/count;
    const yRatio=(mixed?(kind==='supply'?0.68:0.27):0.56)+((i%2)-0.5)*(mixed?0.16:0.12);
-   const anchor=(r.functionalZones||[]).find(z=>z.role===kind)?.anchor;const position=VentPlanGeometry.roomPoint(r,{x:ov.x??(anchor?anchor.x+(i-(count-1)/2)*18:r.x+r.w*xRatio),y:ov.y??(anchor?anchor.y:r.y+r.hpx*yRatio)});out.push({...duct(airflow),id,roomId:r.id,floorId:r.floorId,role:kind,airflow,...position,manual:!!ov.manual});
+   const target=VentPlanEvidence.terminalTarget(r,kind,i,count,{x:r.x+r.w*xRatio,y:r.y+r.hpx*yRatio});const position=VentPlanGeometry.roomPoint(r,{x:ov.x??target.x,y:ov.y??target.y});out.push({...duct(airflow),id,roomId:r.id,floorId:r.floorId,role:kind,airflow,...position,manual:!!ov.manual});
   }
  }
  return out.filter(x=>!(state.removedTerminals||[]).includes(x.id));
@@ -687,7 +687,7 @@ function generatePlanFromAnswers(){
 }
 function newProject(){if(!confirm(t('newConfirm')))return;pushHistory();const lang=state.lang;state=defaultState();state.lang=lang;state.rooms=[];state.floors[0].calibrated=false;state.floors[0].bg=null;selected=null;render()}
 function svgPoint(e){let svg=document.getElementById('svg'),p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())}
-let toastTimer;function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),3200)}
+let toastTimer;function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.classList.remove('show');el.textContent=''},3200)}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 render();loadStoreProducts();plannerShowConsent();plannerTrack('planner_open',{rooms:state.rooms.length,floors:state.floors.length});
 </script><script>(() => {

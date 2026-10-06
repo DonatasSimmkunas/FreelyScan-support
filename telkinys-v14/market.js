@@ -15,7 +15,7 @@
   const photo=E('a',{class:'card-image',href:App.href({skelbimas:item.id}),'data-nav':'','aria-label':'Atidaryti: '+item.title},item.image?E('img',{src:item.image,alt:item.title,loading:'lazy',decoding:'async'}):E('span',{class:'placeholder','aria-hidden':'true'},symbols[item.category]||'□'));
   if(item.image)photo.firstChild.addEventListener('error',()=>photo.replaceChildren(E('span',{class:'placeholder','aria-hidden':'true'},symbols[item.category]||'□')),{once:true});
   const fav=button((s.me?.favorites||[]).includes(item.id)?'♥ Išsaugota':'♡ Išsaugoti',async(e,b)=>{await favorite(item);b.textContent=(s.me?.favorites||[]).includes(item.id)?'♥ Išsaugota':'♡ Išsaugoti';},'btn small',{'aria-pressed':String((s.me?.favorites||[]).includes(item.id))});
-  return E('article',{class:'card'},photo,E('div',{class:'card-body'},E('div',{class:'card-top'},categories[item.category]||item.category),E('h3',{},link(item.title,{skelbimas:item.id})),E('div',{class:'price'},money(item.price,item.priceUnit)),E('p',{class:'card-location'},[item.city,item.district].filter(Boolean).join(' · ')),E('div',{class:'card-bottom'},E('span',{class:'seller-name'},item.seller.name),fav,button('⇄',()=>{addCompare(item);App.render(false);},'btn small',{'aria-label':'Palyginti '+item.title})))));
+  return E('article',{class:'card'},photo,E('div',{class:'card-body'},E('div',{class:'card-top'},categories[item.category]||item.category),E('h3',{},link(item.title,{skelbimas:item.id})),E('div',{class:'price'},money(item.price,item.priceUnit)),E('p',{class:'card-location'},[item.city,item.district].filter(Boolean).join(' · ')),E('div',{class:'card-bottom'},E('span',{class:'seller-name'},item.seller.name),fav,button('⇄',()=>{addCompare(item);App.render(false);},'btn small',{'aria-label':'Palyginti '+item.title}))));
  }
  App.card=card;App.attrNames=attrNames;
  pages.home=async p=>{
@@ -51,7 +51,7 @@
   },'btn quiet small wide'):null);
   root.append(E('div',{class:'detail-grid'},content,side));
   const reviews=E('section',{class:'panel'},E('h2',{},'Autoriaus atsiliepimai'),E('p',{class:'hint'},'Atsiliepimus galima palikti, kai abi pokalbio pusės pažymi bendravimą užbaigtu. Tai nėra patvirtinto mokėjimo ar tapatybės ženklas.'));
-  if(item.reviews.length)reviews.append(item.reviews.map(r=>E('article',{class:'review'},E('div',{class:'row between'},E('strong',{},r.author),E('span',{class:'rating'},r.score+' / 5')),E('p',{},r.body),E('small',{class:'muted'},date(r.created_at)))));else reviews.append(E('p',{class:'muted'},'Atsiliepimų dar nėra.'));
+  if(item.reviews.length)reviews.append(...item.reviews.map(r=>E('article',{class:'review'},E('div',{class:'row between'},E('strong',{},r.author),E('span',{class:'rating'},r.score+' / 5')),E('p',{},r.body),E('small',{class:'muted'},date(r.created_at)))));else reviews.append(E('p',{class:'muted'},'Atsiliepimų dar nėra.'));
   root.append(reviews);return root;
  };
  pages.compare=async()=>{

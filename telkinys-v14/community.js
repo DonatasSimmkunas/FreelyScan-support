@@ -13,7 +13,7 @@
  App.calendarPane=async()=>{
   const data=await api('calendar');const root=E('section',{class:'stack'},E('div',{class:'section-head'},E('div',{},E('h2',{},'Suderink laiką, ne dešimt žinučių.'),E('p',{class:'muted small-text'},'Sąraše laikas rodomas Lietuvos laiko zonoje. Pasiūlymus tvirtina kita pokalbio pusė.')),button('Atnaujinti',()=>App.render(false),'btn small')));
   if(!data.appointments.length)root.append(empty('Susitikimų dar nėra.','Pasiūlyk laiką konkrečiame pokalbyje. Kitas dalyvis galės jį patvirtinti arba atmesti.',link('Atverti žinutes',{view:'account',tab:'messages'},'btn primary')));
-  else root.append(data.appointments.map(a=>panel(E('div',{class:'row between'},E('h3',{},a.title),E('span',{class:'badge'},appointmentStates[a.state])),E('strong',{},date(a.starts_at)+' · '+a.duration_minutes+' min.'),E('p',{class:'text-wrap muted'},a.note),E('div',{class:'actions'},link('Atverti pokalbį',{view:'thread',id:a.thread_id},'btn small'),button('Į mano kalendorių',()=>calendarFile(a,a.title),'btn small')))));
+  else root.append(...data.appointments.map(a=>panel(E('div',{class:'row between'},E('h3',{},a.title),E('span',{class:'badge'},appointmentStates[a.state])),E('strong',{},date(a.starts_at)+' · '+a.duration_minutes+' min.'),E('p',{class:'text-wrap muted'},a.note),E('div',{class:'actions'},link('Atverti pokalbį',{view:'thread',id:a.thread_id},'btn small'),button('Į mano kalendorių',()=>calendarFile(a,a.title),'btn small')))));
   return root;
  };
  pages.thread=async p=>{

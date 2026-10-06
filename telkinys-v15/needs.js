@@ -46,7 +46,7 @@
  pages.need=async p=>{
   const gate=App.requireUser();if(gate){s.afterAuth={...p};return gate;}
   const data=await api('need-detail',{id:p.id}),n=data.need;
-  const root=E('div',{class:'v15-need-detail'},heading(n.title,services[n.service]+' · '+n.city),E('div',{class:'row between'},tag(n.state),E('div',{class:'actions'},link('Visi mano poreikiai',{view:'needs'},'btn small'),button('Atnaujinti',refresh,'btn small'))),panel(E('h2',{},'Užduotis'),E('p',{class:'text-wrap'},n.scope),E('dl',{class:'v15-facts'},E('dt',{},'Pageidaujamas laikas'),E('dd',{},n.timing),E('dt',{},'Biudžetas'),E('dd',{},amount(n.budget_cents))),n.moderation_note?notice(n.moderation_note,'warning'):null);
+  const root=E('div',{class:'v15-need-detail'},heading(n.title,services[n.service]+' · '+n.city),E('div',{class:'row between'},tag(n.state),E('div',{class:'actions'},link('Visi mano poreikiai',{view:'needs'},'btn small'),button('Atnaujinti',refresh,'btn small'))),panel(E('h2',{},'Užduotis'),E('p',{class:'text-wrap'},n.scope),E('dl',{class:'v15-facts'},E('dt',{},'Pageidaujamas laikas'),E('dd',{},n.timing),E('dt',{},'Biudžetas'),E('dd',{},amount(n.budget_cents))),n.moderation_note?notice(n.moderation_note,'warning'):null));
   App.onLive=async()=>toast('Gautas atnaujinimas dėl poreikio. Paspausk „Atnaujinti“.');
   if(data.owner){const actions=E('div',{class:'actions'});
    if(['draft','pending','rejected'].includes(n.state))actions.append(link('Redaguoti',{view:'need-new',id:n.id},'btn'));

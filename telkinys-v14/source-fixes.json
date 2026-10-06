@@ -2,5 +2,6 @@
   {"file":"market.js","find":"{'aria-label':'Palyginti '+item.title})))));","replace":"{'aria-label':'Palyginti '+item.title}))));"},
   {"file":"market.js","find":"reviews.append(item.reviews.map(","replace":"reviews.append(...item.reviews.map("},
   {"file":"community.js","find":"root.append(data.appointments.map(","replace":"root.append(...data.appointments.map("},
-  {"file":"core.js","find":"socket?.readyState===WebSocket.OPEN)return;const epoch","replace":"[WebSocket.OPEN,WebSocket.CONNECTING].includes(socket?.readyState))return;const epoch"}
+  {"file":"core.js","find":"socket?.readyState===WebSocket.OPEN)return;const epoch","replace":"[WebSocket.OPEN,WebSocket.CONNECTING].includes(socket?.readyState))return;const epoch"},
+  {"file":"account.js","find":"toast('Nuotrauka pašalinta.');},'btn small')))));","replace":"toast('Nuotrauka pašalinta.');},'btn small'))));"}
 ]

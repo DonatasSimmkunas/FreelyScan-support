@@ -12,7 +12,7 @@ export function v14ParseQuery(value) {
   const p = {category:'',city:'',district:'',min:null,max:null,rooms:null,minYear:null,maxMileage:null,notGround:false,keywords:[],warnings:[]};
   const use = (re, fn) => { text = text.replace(re,(...args)=>{fn(...args);return ' ';}); };
   use(/\b(?:iki|maziau nei|maziau negu)\s*(\d+(?:[ \u00a0]\d{3})*(?:[.,]\d+)?)\s*(k\b|tukst\w*\.?)?\s*km\b/g,(_,n,u)=>p.maxMileage=numberValue(n,u));
-  use(/\bnuo\s*(20\d{2})\s*(?:m(?:et\w*)?\.?)?(?!\d)/g,(_,n)=>p.minYear=Number(n));
+  use(/\bnuo\s*(20\d{2})\s*(?:m\b\.?|met\w*\b)/g,(_,n)=>p.minYear=Number(n));
   use(/\b(20\d{2})\s*\+/g,(_,n)=>p.minYear=Number(n));
   use(/\b(\d+)\s*kamb\w*/g,(_,n)=>p.rooms=Number(n));
   use(/\b(?:ne|nenoriu)\s*(?:1|pirm\w*)\s*aukst\w*/g,()=>p.notGround=true);
@@ -30,8 +30,9 @@ export function v14ParseQuery(value) {
     p.warnings.push('Šioje demonstracijoje laikas, prieinamumas ir baterijos kriterijai dar netikrinami.');
     text=text.replace(/\b(?:rytoj|siandien|poryt|savaite|laisv\w*|baterij\w*)\b/g,' ').replace(/\bpo\s*\d+(?::\d+)?\s*(?:val\w*\.?)?/g,' ');
   }
+  if(/\b(nauj\w*|naudot\w*)\b/.test(text))p.warnings.push('Būklę patikrink pasiūlymo aprašyme: atskiras nauja / naudota filtras dar neprijungtas.');
   const ignored=/^(man|reikia|ieskau|ieskoti|noriu|pirkti|perku|parduoti|parduodu|nuomai|nuomoti|iki|nuo|su|ir|ar|ne|nenoriu|tik|pvz|bent|maziau|nei|negu|eur|euro|eu|val|men|m|km|gb|k|tukst|butas|buto|busta|bustas|automobilis|automobilio|automobili|auto|daiktas|daiktai|paslauga|paslaugos|paslaugu|darbas|darbo|darbai|kaina|kainos|palyginti|palyginimas|pigiausia|nauja|naujas|nauju|naudotas|naudota|naudotu)$/;
-  p.keywords=text.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t=>t.length>1&&!/^\d+$/.test(t)&&!ignored.test(t));
+  p.keywords=text.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t=>t.length>1&&!ignored.test(t));
   p.keywords=[...new Set(p.keywords)];
   return p;
 }

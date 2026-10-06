@@ -16,7 +16,7 @@ Date: 2026-10-06. This release is a preliminary planner update. It does not esta
 | 10 | Partial | Shared endpoint/edge graph records room incidence and non-manifold edges. General T-junction splitting and complete shared-wall reconciliation are unfinished. |
 | 11 | Implemented, limited to resolvable enclosures | Structural enclosure is built without predicted rooms. Unassigned area is measured independently and blocks readiness. Open external boundaries remain unresolved. |
 | 12 | Implemented, conservative | Original-pixel snapping accepted only when IoU with the original candidate is at least .98. This is a bounded refinement, not a wall accuracy guarantee. |
-| 13 | Implemented | Separate printed kitchen/living anchors guide extract/supply placement in a single open-plan room. Manual terminal overrides remain authoritative. Missing anchors retain preliminary placement. |
+| 13 | Implemented | Separate printed kitchen/living anchors guide extract/supply placement in a single open-plan room. Ambiguous combined titles are not treated as spatial zone anchors; multiple terminals are placed perpendicular to the supply/extract anchor axis. Manual terminal overrides remain authoritative. Missing anchors retain preliminary placement. |
 | 14 | Partial | Multiple wall modes, gap variants, high-resolution and PDF candidates compared by polygon agreement. A validated independent learned segmentation model and calibrated acceptance probabilities are unfinished. |
 | 15 | Implemented, explicit-unit evidence | Horizontal and vertical printed dimensions with explicit units are checked independently. Two horizontal widths remain estimated. Bare numbers never establish independent scale. |
 | 16 | Partial | Boundary/scale uncertainty yields geometric area intervals, shown in Inspector and carried in quantity metadata. These are assumption-based bounds, not statistical confidence intervals. Full material/purchase interval propagation is unfinished. |
@@ -27,7 +27,7 @@ Date: 2026-10-06. This release is a preliminary planner update. It does not esta
 
 ## Validation
 
-- 123 additional evidence checks pass, including 21 controlled layouts and 63 raster transformations.
+- 127 additional evidence checks pass, including 21 controlled layouts and 63 raster transformations.
 - Existing planner, input, geometry, reliability, language, export, checkout and product tests pass.
 - Website build and public-surface checks pass.
 - No new independent real-world recognition percentage is claimed.

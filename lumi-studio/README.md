@@ -2,6 +2,8 @@
 
 This is the support page for Lumi Studio: Dress Up for iPhone and iPad, developed by Donatas Simkunas. It does not describe FreelyScan or Glimmi Salon.
 
+[Privacy policy / Privatumo politika](PRIVACY.md) · [Terms of Use — Apple Standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)
+
 **Contact:** [donatas@edvconsult.no](mailto:donatas@edvconsult.no). Put **Lumi Studio** in the subject and include the app version, your device model, the iOS or iPadOS version, and the steps that led to the problem. Do not send passwords, Apple Account verification codes, payment-card details, or unnecessary personal information. Avoid posting children's information or private pictures in public GitHub issues.
 
 ## Create and save a look

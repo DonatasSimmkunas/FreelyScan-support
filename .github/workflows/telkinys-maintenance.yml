@@ -1,0 +1,33 @@
+name: Telkinys private backup and restore
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/telkinys-maintenance.yml'
+      - '.github/telkinys/verify_backup.py'
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: telkinys-private-maintenance
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'DonatasSimmkunas/FreelyScan-support' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout only trusted default-branch source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Create private backup and verify restoration in disposable PostgreSQL
+        run: python3 .github/telkinys/verify_backup.py
+      - name: Remove isolated database after success or failure
+        if: always()
+        run: docker rm -f "telkinys-restore-${GITHUB_RUN_ID}" >/dev/null 2>&1 || true
+# No upload-artifact step. Tokens, private URLs, database rows and photos stay off public logs/artifacts.
+# Schedule is best-effort; GitHub can delay runs and disables inactive public-repository schedules.

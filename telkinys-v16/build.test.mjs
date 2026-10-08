@@ -1,0 +1,18 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const html=await readFile(new URL('../dist/index.html',import.meta.url),'utf8');
+const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const style=html.match(/<style>([\s\S]*?)<\/style>/)[1];
+const b64=s=>createHash('sha256').update(s).digest('base64');
+test('V16 version and beta/noindex boundary remain explicit',()=>{assert.match(html,/application-version" content="16\.0\.0-beta/);assert.match(html,/noindex, nofollow/);assert.match(html,/V16 · uždara beta/);});
+test('script CSP hash matches the actual emitted bytes',()=>assert.ok(html.includes("script-src 'sha256-"+b64(script)+"'")));
+test('style CSP hash matches the actual emitted bytes',()=>assert.ok(html.includes("style-src 'sha256-"+b64(style)+"'")));
+test('legacy modal flattens nodes instead of rendering an array as text',()=>{assert.ok(script.includes('...children.flat(Infinity));d.showModal()'));assert.ok(!script.includes(')),children);d.showModal()'));});
+test('V16 routes are in the emitted application',()=>{for(const route of ['pages.security=','pages.operations=','pages.changes=','inventory-status'])assert.ok(script.includes(route));});
+test('untrusted content is not assigned into HTML sinks',()=>assert.doesNotMatch(script,/\.(?:innerHTML|outerHTML)\s*=|insertAdjacentHTML\s*\(|document\.write\s*\(/));
+test('removed diagram is not reintroduced',()=>assert.doesNotMatch(html,/lake-stage|lake-source|stream-map/));
+test('AI requires consent, human review, and handles OUT_OF_CREDITS',()=>{assert.ok(script.includes('if(!consent.checked)'));assert.ok(script.includes('Naudoti šį juodraštį'));assert.ok(script.includes("error.code==='OUT_OF_CREDITS'"));});
+test('backup and bulk-session actions reauthenticate in UI',()=>{assert.ok(script.includes("passwordAction('Sukurti privačią kopiją?"));assert.ok(script.includes("passwordAction('Atjungti kitus prisijungimus?"));});
+test('blocked contact hides message form without removing agreement copy',()=>{assert.ok(script.includes('contactBlocked'));assert.ok(script.includes('blockedUserIds'));assert.ok(script.includes('Susitarimo kortelė'));});

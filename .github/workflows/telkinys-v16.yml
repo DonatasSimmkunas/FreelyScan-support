@@ -1,0 +1,42 @@
+name: Telkinys V16 validation
+on:
+  push:
+    branches: [telkinys-v16-work]
+    paths: ['telkinys-v14/**', 'telkinys-v15/**', 'telkinys-v16/**', '.github/workflows/telkinys-v16.yml']
+permissions:
+  contents: write
+concurrency:
+  group: telkinys-v16-work-validation
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout the isolated V16 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build with syntax and CSP integrity validation
+        run: node telkinys-v16/build.mjs --write-deployment-artifact
+      - name: Release regression tests
+        run: node --test telkinys-v16/build.test.mjs
+      - name: Upload only application source and generated frontend
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: telkinys-v16-review
+          path: |
+            telkinys-v14/
+            telkinys-v15/
+            telkinys-v16/
+            dist/
+          retention-days: 7
+      - name: Save passing artifact to work branch only
+        if: success() && github.ref == 'refs/heads/telkinys-v16-work'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- telkinys-deploy/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m 'Build verified Telkinys V16 candidate [skip ci]'
+            git push origin HEAD:telkinys-v16-work
+          fi

@@ -49,7 +49,6 @@ def sql(text, label):
         '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres'], input=text,
         text=True, capture_output=True, timeout=120)
     if result.returncode:
-        # psql error text can contain user values. Deliberately do not print it.
         raise RuntimeError('Isolated restore SQL failed during ' + label)
     return result.stdout.strip()
 
@@ -68,9 +67,9 @@ def main():
         raise RuntimeError('Wrong backup format or source project')
     password = secrets.token_urlsafe(32)
     print('::add-mask::' + password, flush=True)
-    # No published ports and no persistent volume: this cannot address the live database.
+    # Match production PostgreSQL 18; no published ports or persistent volume.
     start = subprocess.run(['docker', 'run', '-d', '--name', CONTAINER,
-        '-e', 'POSTGRES_PASSWORD=' + password, 'postgres:17'], capture_output=True, text=True, timeout=180)
+        '-e', 'POSTGRES_PASSWORD=' + password, 'postgres:18'], capture_output=True, text=True, timeout=180)
     if start.returncode:
         raise RuntimeError('Could not start the disposable PostgreSQL database')
     try:
@@ -99,7 +98,6 @@ def main():
                     definition += ' NOT NULL'
                 columns.append(definition)
             sql('CREATE TABLE telkinys.' + ident(table['name']) + '(' + ','.join(columns) + ');', 'table ' + table['name'])
-        # All rows load before foreign keys, independent of alphabetical table ordering.
         for table in snapshot['tables']:
             if table['rows']:
                 name = 'telkinys.' + ident(table['name'])
@@ -109,6 +107,9 @@ def main():
         for foreign in (False, True):
             for table in snapshot['tables']:
                 for constraint in table['constraints']:
+                    # PostgreSQL 18 reports NOT NULL as a constraint. Already recreated from columns.
+                    if constraint['type'] == 'n':
+                        continue
                     if (constraint['type'] == 'f') == foreign:
                         sql('ALTER TABLE telkinys.' + ident(table['name']) + ' ADD CONSTRAINT ' + ident(constraint['name']) + ' ' + constraint['definition'] + ';', 'constraint ' + table['name'])
         for fn in snapshot['functions']:
@@ -122,6 +123,10 @@ def main():
             restored = json.loads(sql("SELECT COALESCE(jsonb_agg(to_jsonb(t)),'[]'::jsonb) FROM telkinys." + ident(table['name']) + ' t;', 'roundtrip ' + table['name']))
             if canonical(restored) != canonical(table['rows']):
                 raise RuntimeError('Restored row values differ in ' + table['name'])
+            expected_required = sorted(col['name'] for col in table['columns'] if col['required'])
+            required_sql = "SELECT COALESCE(jsonb_agg(column_name ORDER BY column_name),'[]'::jsonb) FROM information_schema.columns WHERE table_schema='telkinys' AND table_name=" + literal(table['name']) + " AND is_nullable='NO';"
+            if json.loads(sql(required_sql, 'not-null verification')) != expected_required:
+                raise RuntimeError('Restored NOT NULL constraints differ')
             total += len(restored)
         if total != snapshot['totalRows']:
             raise RuntimeError('Restored row total differs')
@@ -141,7 +146,7 @@ def main():
             raise RuntimeError('Server did not accept the restore verification')
         print(json.dumps({'ok': True, 'backupId': bundle['id'], **report}), flush=True)
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-            summary.write('## Telkinys backup verified\n\nPrivate snapshot restored into a disposable PostgreSQL database. All row values, constraints, indexes and photo digests checked.\n\n')
+            summary.write('## Telkinys backup verified\n\nPrivate snapshot restored into a disposable PostgreSQL database. All row values, constraints, indexes and any included photo digests checked.\n\n')
             summary.write(f'Tables: {len(names)}; rows: {total}; photos: {len(snapshot["files"])}. No private data was uploaded as an artifact.\n')
     finally:
         subprocess.run(['docker', 'rm', '-f', CONTAINER], capture_output=True, timeout=30)
@@ -150,7 +155,6 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as error:
-        # No traceback: URLs, JWTs, SQL and user data must never enter public Actions logs.
         message = str(error) if isinstance(error, RuntimeError) else type(error).__name__
         print('::error::Telkinys backup verification failed: ' + message, flush=True)
         raise SystemExit(1)

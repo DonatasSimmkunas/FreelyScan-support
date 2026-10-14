@@ -1,6 +1,6 @@
 # FreelyScan privacy policy
 
-**Effective October 1, 2026.** This policy applies to the FreelyScan iPhone app published by its App Store seller.
+**Effective October 14, 2026.** This policy applies to the FreelyScan iPhone app published by its App Store seller.
 
 ## Documents and on-device processing
 
@@ -16,7 +16,9 @@ Apple processes monthly and annual FreelyScan Pro subscription purchases. The ap
 
 ## Advertising technology
 
-The 1.0 app bundle includes Google Mobile Ads and Google's User Messaging Platform, but has no live AdMob app ID or production banner unit. Its release code does not start the ad SDK or request an ad without valid production identifiers. If advertisements are enabled in a later version, Google may process device identifiers, usage, consent choices and related data to serve and measure ads; we will update the app's disclosures and this policy before enabling that version. See [Google's privacy policy](https://policies.google.com/privacy).
+FreelyScan 1.0 build 14.1 does not include Google Mobile Ads or Google's User Messaging Platform, and does not request or display advertisements. These SDKs were removed from this build rather than only disabled at runtime.
+
+Earlier 1.0 builds included these Google SDKs without live AdMob production identifiers; their release code did not start the ad SDK or request an ad without valid identifiers. If advertisements are introduced in a later version, we will update the app's disclosures and this policy before enabling that version. [Google's privacy policy](https://policies.google.com/privacy) describes Google's handling of data in products using its services.
 
 ## Support requests
 
